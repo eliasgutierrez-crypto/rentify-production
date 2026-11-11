@@ -220,7 +220,7 @@ Define estas variables en `.env` en la raíz de la aplicación. La plantilla sin
 | --- | --- | --- |
 | `DATABASE_URL` | Sí | URL de conexión PostgreSQL usada por Prisma en tiempo de ejecución. |
 | `DIRECT_URL` | Sí | URL de conexión directa que Prisma usa para operaciones de migración. |
-| `NEXT_PUBLIC_APP_URL` | Sí en despliegue | URL pública del sitio, usada en los enlaces de confirmación y recuperación. En local puede ser `http://localhost:3000`. |
+| `NEXT_PUBLIC_APP_URL` | Recomendada en despliegue | URL pública del sitio, usada en los enlaces de confirmación y recuperación. En Vercel, si falta o apunta a localhost, se usa el dominio del despliegue; en local puede ser `http://localhost:3000`. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Sí | URL del proyecto Supabase. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sí | Clave pública anon/publishable del proyecto Supabase. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Sí para revisión de documentos | Clave privada usada únicamente en el servidor para generar enlaces temporales de lectura. Nunca debe exponerse al navegador. |
@@ -243,8 +243,8 @@ Los puertos y parámetros dependen de tu proveedor. Si usas Supabase, utiliza la
 ## Despliegue en Vercel
 
 1. Importa el repositorio en Vercel y configura **Root Directory** como `rentify`, el directorio que contiene `package.json`.
-2. Agrega en las variables de entorno de Vercel todas las variables marcadas como obligatorias en la tabla anterior. Configúralas para los entornos que vayas a utilizar (Preview y Production); no conectes Preview a una base de producción.
-3. En Supabase Auth, agrega la URL pública final y `https://TU-DOMINIO/auth/callback` a **Site URL** y **Redirect URLs**. Para despliegues de Preview, permite explícitamente las URLs necesarias.
+2. Agrega en las variables de entorno de Vercel todas las variables marcadas como obligatorias en la tabla anterior. Configúralas para los entornos que vayas a utilizar (Preview y Production); no conectes Preview a una base de producción. Define `NEXT_PUBLIC_APP_URL` con el dominio público estable de Production (por ejemplo, `https://rentify.vercel.app`); si falta o conserva `http://localhost:3000`, la aplicación usa el dominio de Vercel automáticamente.
+3. En Supabase Auth, establece como **Site URL** el dominio público final y agrega `https://TU-DOMINIO/auth/callback` a **Redirect URLs**. Para despliegues de Preview, permite explícitamente los dominios de Preview necesarios; Supabase debe aceptar la URL de callback que Vercel genere.
 4. Antes de recibir tráfico con el nuevo esquema, ejecuta `npx prisma migrate deploy` con las variables de base de datos del entorno de destino. Haz una copia de seguridad y revisa el estado de migraciones primero; no ejecutes `migrate dev` en producción.
 5. Despliega desde Vercel. El comando `npm run build` genera el cliente Prisma y después compila Next.js; no aplica migraciones ni ejecuta el seed.
 6. Prueba registro, confirmación, inicio de sesión, recuperación, lectura/escritura autorizada de Storage y una acción operativa.
@@ -314,9 +314,11 @@ Rentify usa Supabase Auth para registro, inicio/cierre de sesión, confirmación
 ### Configurar los correos de Supabase Auth
 
 1. En Supabase, habilita el proveedor de correo/contraseña y exige confirmar la dirección antes de iniciar sesión.
-2. En la configuración de URL de Auth, establece `NEXT_PUBLIC_APP_URL` como Site URL y permite la redirección `https://tu-dominio/auth/callback` (en local, `http://localhost:3000/auth/callback`).
+2. En la configuración de URL de Auth, establece como Site URL el dominio público de Rentify (el de Vercel en producción) y permite la redirección `https://tu-dominio/auth/callback` (en local, `http://localhost:3000/auth/callback`).
 3. Configura las plantillas de confirmación y recuperación para usar `{{ .ConfirmationURL }}`; comprueba que la redirección llegue a `/auth/callback` y que recuperación termine en `/restablecer`.
 4. El proveedor de correo predeterminado de Supabase tiene límites de entrega y es adecuado principalmente para pruebas. Para producción, revisa la documentación y los límites vigentes de Supabase; si necesitas entrega confiable, tendrás que configurar un SMTP externo con un remitente autorizado.
+
+Si la solicitud de recuperación falla, revisa **Supabase → Authentication → Logs**. Un error `redirect_to_not_allowed` significa que falta la URL exacta `https://TU-DOMINIO/auth/callback` en **Redirect URLs**; `smtp_setup_required` o `unexpected_failure` apuntan a la configuración/límites del proveedor de correo. La página que recibe el enlace es `/restablecer`; no es necesario crear otra ruta.
 
 Los correos de confirmación y recuperación los envía Supabase Auth. Los eventos operativos (solicitudes, visitas, evaluaciones, documentos, moderación y reportes) se guardan como notificaciones dentro de Rentify y se muestran en el dashboard; no se envían por correo. Las preferencias previas de notificación por email ya no aplican.
 

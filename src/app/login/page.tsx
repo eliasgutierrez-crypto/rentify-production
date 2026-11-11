@@ -10,7 +10,7 @@ async function LoginContent({
   searchParams: Promise<{ correo?: string }>
 }) {
   const usuario = await getCurrentUser()
-  if (usuario) redirect('/dashboard')
+  if (usuario) redirect(usuario.administrador ? '/dashboard/admin' : '/dashboard')
 
   const { correo } = await searchParams
   const initialError =

@@ -4,6 +4,7 @@
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { hashPassword, verifyPassword } from '@/lib/password'
+import { obtenerUrlAplicacion } from '@/lib/app-url'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { ESTADOS_MEXICO } from '@/lib/estados-mexico'
 
@@ -16,11 +17,6 @@ export interface FormState {
 function valor(formData: FormData, campo: string, recortar = true): string {
   const value = formData.get(campo)
   return typeof value === 'string' ? (recortar ? value.trim() : value) : ''
-}
-
-function obtenerUrlAplicacion(): string {
-  const url = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  return url.replace(/\/+$/, '')
 }
 
 function validarContrasena(contrasena: string): string | null {
@@ -54,6 +50,29 @@ function mensajeErrorRegistro(codigo: string | undefined, status: number | undef
       return 'Supabase rechazó la contraseña. Usa una más segura y vuelve a intentarlo.'
     default:
       return 'Supabase no pudo completar el registro. Revisa la configuración del proveedor Email y los registros de Auth en el panel de Supabase.'
+  }
+}
+
+function mensajeErrorRecuperacion(codigo: string | undefined, status: number | undefined): string {
+  switch (codigo) {
+    case 'redirect_to_not_allowed':
+      return 'Supabase rechazó la URL de retorno. En Authentication → URL Configuration → Redirect URLs, agrega https://rentify-production.vercel.app/auth/callback.'
+    case 'email_provider_disabled':
+    case 'signup_disabled':
+      return 'El proveedor de correo está desactivado en Supabase. Habilita Email en Authentication → Providers.'
+    case 'smtp_setup_required':
+      return 'Supabase no tiene un proveedor de correo configurado para enviar a esta dirección. Configura SMTP en Authentication → SMTP Settings.'
+    case 'over_email_send_rate_limit':
+    case 'over_request_rate_limit':
+      return 'Supabase limitó temporalmente los correos. Espera un momento o revisa los límites de envío y la configuración SMTP.'
+    case 'email_address_invalid':
+      return 'Supabase rechazó el correo. Verifica que esté escrito correctamente.'
+    case 'unexpected_failure':
+      return 'Supabase no pudo enviar el correo. Revisa Authentication → Logs y la configuración SMTP del proyecto.'
+    default:
+      return status === 401
+        ? 'Supabase rechazó la clave pública. Verifica que NEXT_PUBLIC_SUPABASE_ANON_KEY pertenezca al proyecto y que no sea la service_role.'
+        : 'No se pudo enviar el enlace. Revisa Authentication → Logs en Supabase para ver el motivo.'
   }
 }
 
@@ -334,7 +353,7 @@ export async function loginAction(
     },
   })
 
-  redirect('/dashboard')
+  redirect(usuario.administrador ? '/dashboard/admin' : '/dashboard')
 }
 
 export async function logoutAction() {
@@ -360,8 +379,12 @@ export async function solicitarRecuperacionAction(
   })
 
   if (error) {
-    console.error('Error al solicitar recuperación en Supabase Auth:', error)
-    return { error: 'No se pudo enviar el enlace. Verifica la configuración de correo e intenta de nuevo.' }
+    console.error('Error al solicitar recuperación en Supabase Auth:', {
+      code: error.code,
+      status: error.status,
+      message: error.message,
+    })
+    return { error: mensajeErrorRecuperacion(error.code, error.status) }
   }
 
   return {

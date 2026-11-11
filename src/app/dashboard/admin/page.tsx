@@ -74,22 +74,25 @@ async function AdminContent() {
     }),
   ])
 
-  const supabaseAdmin = createSupabaseAdminClient()
-  const documentosFirmados = await Promise.all(
-    documentos.map(async (documento) => {
-      if (documento.ruta_archivo.startsWith('http')) return documento
+  let documentosFirmados = documentos
+  if (documentos.some((documento) => !documento.ruta_archivo.startsWith('http'))) {
+    const supabaseAdmin = createSupabaseAdminClient()
+    documentosFirmados = await Promise.all(
+      documentos.map(async (documento) => {
+        if (documento.ruta_archivo.startsWith('http')) return documento
 
-      const { data, error } = await supabaseAdmin.storage
-        .from('rentify')
-        .createSignedUrl(documento.ruta_archivo, 5 * 60)
-      if (error || !data?.signedUrl) {
-        console.error(`No se pudo generar acceso temporal al documento ${documento.id}:`, error)
-        throw new Error('No se pudieron cargar los documentos privados para revisión.')
-      }
+        const { data, error } = await supabaseAdmin.storage
+          .from('rentify')
+          .createSignedUrl(documento.ruta_archivo, 5 * 60)
+        if (error || !data?.signedUrl) {
+          console.error(`No se pudo generar acceso temporal al documento ${documento.id}:`, error)
+          throw new Error('No se pudieron cargar los documentos privados para revisión.')
+        }
 
-      return { ...documento, ruta_archivo: data.signedUrl }
-    })
-  )
+        return { ...documento, ruta_archivo: data.signedUrl }
+      })
+    )
+  }
 
   return (
     <div className="space-y-6">
