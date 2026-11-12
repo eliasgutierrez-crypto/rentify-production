@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar'
 import PropertyCard from '@/components/PropertyCard'
 import MapaCatalogo from '@/components/MapaCatalogo'
 import { prisma } from '@/lib/prisma'
+import { aproximarCoordenada, obtenerUbicacionAproximada } from '@/lib/ubicacion-publica'
 
 interface Props {
   searchParams: Promise<{
@@ -105,11 +106,10 @@ async function getPropiedades(filtros: Awaited<Props['searchParams']>) {
   return publicaciones.map((publicacion) => ({
     id: publicacion.id,
     titulo: publicacion.inmueble.tipo_inmueble,
-    ubicacion: publicacion.inmueble.direccion,
+    ubicacion: obtenerUbicacionAproximada(publicacion.inmueble.direccion),
     precio: publicacion.precio_renta,
     habitaciones: publicacion.inmueble.numero_habitaciones,
     banos: publicacion.inmueble.numero_banos,
-    estacionamiento: 1,
     metros: publicacion.inmueble.metros_cuadrados,
     tipo: publicacion.inmueble.tipo_inmueble,
     verificada:
@@ -118,8 +118,12 @@ async function getPropiedades(filtros: Awaited<Props['searchParams']>) {
     imagen:
       publicacion.fotos[0]?.ruta_archivo ||
       'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    latitud: publicacion.inmueble.latitud,
-    longitud: publicacion.inmueble.longitud,
+    latitud: publicacion.inmueble.latitud === null
+      ? null
+      : aproximarCoordenada(publicacion.inmueble.latitud),
+    longitud: publicacion.inmueble.longitud === null
+      ? null
+      : aproximarCoordenada(publicacion.inmueble.longitud),
     permite_mascotas: publicacion.permite_mascotas,
     permite_ninos: publicacion.permite_ninos,
     calificacion_promedio: publicacion.inmueble.calificacion_promedio,

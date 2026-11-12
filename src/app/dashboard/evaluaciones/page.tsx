@@ -174,10 +174,23 @@ async function EvaluacionesContent() {
                     <Star
                       key={i}
                       size={12}
-                      className={i < ev.calificacion ? 'fill-rating-gold' : 'text-gray-300'}
+                      className={i < Math.round(ev.calificacion) ? 'fill-rating-gold' : 'text-gray-300'}
                     />
                   ))}
                 </div>
+                <p className="mt-1 text-xs text-on-surface-variant">
+                  Promedio: {ev.calificacion.toFixed(2)} de 5
+                </p>
+                {ev.calificacion_atencion !== null && (
+                  <p className="mt-1 text-xs text-on-surface-variant">
+                    Atención: {ev.calificacion_atencion}/5 · Mantenimiento: {ev.calificacion_mantenimiento}/5 · Cumplimiento: {ev.calificacion_cumplimiento}/5
+                  </p>
+                )}
+                {ev.calificacion_puntualidad !== null && (
+                  <p className="mt-1 text-xs text-on-surface-variant">
+                    Puntualidad: {ev.calificacion_puntualidad}/5 · Cuidado: {ev.calificacion_cuidado}/5 · Higiene: {ev.calificacion_higiene}/5
+                  </p>
+                )}
                 {ev.comentario && (
                   <p className="text-xs text-on-surface-variant mt-2 italic">
                     &ldquo;{ev.comentario}&rdquo;

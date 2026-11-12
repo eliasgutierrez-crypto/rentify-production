@@ -4,7 +4,13 @@
 import Image from 'next/image'
 import { useState } from 'react'
 import { Eye, Ban, CheckCircle2, XCircle, MapPin, User, Calendar } from 'lucide-react'
-import { suspenderPublicacionAction, reactivarPublicacionAction, eliminarPublicacionAction } from '@/app/actions/admin'
+import {
+  aprobarPublicacionAction,
+  suspenderPublicacionAction,
+  reactivarPublicacionAction,
+  eliminarPublicacionAction,
+  rechazarPublicacionAction,
+} from '@/app/actions/admin'
 
 export interface PublicacionAdmin {
   id: number
@@ -13,6 +19,7 @@ export interface PublicacionAdmin {
   estado: string
   fecha_publicacion: Date
   motivo_suspension: string | null
+  motivo_rechazo: string | null
   total_resenas: number
   inmueble: {
     tipo_inmueble: string
@@ -31,6 +38,8 @@ export interface PublicacionAdmin {
 
 const filtros = [
   { value: 'todas', label: 'Todas' },
+  { value: 'pendiente_revision', label: 'Pendientes' },
+  { value: 'rechazada', label: 'Rechazadas' },
   { value: 'activa', label: 'Activas' },
   { value: 'suspendida', label: 'Suspendidas' },
   { value: 'eliminada', label: 'Eliminadas' },
@@ -41,6 +50,7 @@ type Filtro = (typeof filtros)[number]['value']
 export default function TabModeracion({ publicaciones }: { publicaciones: PublicacionAdmin[] }) {
   const [filtro, setFiltro] = useState<Filtro>('todas')
   const [modalSuspender, setModalSuspender] = useState<number | null>(null)
+  const [modalRechazar, setModalRechazar] = useState<number | null>(null)
   const [motivo, setMotivo] = useState('')
 
   const filtradas = publicaciones.filter((p) =>
@@ -122,7 +132,9 @@ export default function TabModeracion({ publicaciones }: { publicaciones: Public
                       className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full mt-1 inline-block ${
                         pub.estado === 'activa'
                           ? 'bg-green-100 text-green-700'
-                          : pub.estado === 'suspendida'
+                          : pub.estado === 'pendiente_revision'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : pub.estado === 'rechazada' || pub.estado === 'suspendida'
                           ? 'bg-red-100 text-red-700'
                           : 'bg-gray-100 text-gray-700'
                       }`}
@@ -142,6 +154,11 @@ export default function TabModeracion({ publicaciones }: { publicaciones: Public
                     Suspensión: {pub.motivo_suspension}
                   </p>
                 )}
+                {pub.motivo_rechazo && (
+                  <p className="text-xs text-red-600 mt-2 bg-red-50 px-2 py-1 rounded">
+                    Motivo del rechazo: {pub.motivo_rechazo}
+                  </p>
+                )}
 
                 <div className="flex flex-wrap gap-2 mt-3">
                   <a
@@ -152,6 +169,29 @@ export default function TabModeracion({ publicaciones }: { publicaciones: Public
                   >
                     <Eye size={12} /> Ver
                   </a>
+
+                  {pub.estado === 'pendiente_revision' && (
+                    <>
+                      <form action={aprobarPublicacionAction}>
+                        <input type="hidden" name="publicacion_id" value={pub.id} />
+                        <button
+                          type="submit"
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition"
+                        >
+                          <CheckCircle2 size={12} /> Aprobar
+                        </button>
+                      </form>
+                      <button
+                        onClick={() => {
+                          setModalRechazar(pub.id)
+                          setMotivo('')
+                        }}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition"
+                      >
+                        <XCircle size={12} /> Rechazar
+                      </button>
+                    </>
+                  )}
 
                   {pub.estado === 'activa' && (
                     <button
@@ -245,6 +285,64 @@ export default function TabModeracion({ publicaciones }: { publicaciones: Public
                   className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 font-semibold text-sm disabled:opacity-50"
                 >
                   Suspender
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {modalRechazar && (
+        <div
+          className="fixed inset-0 bg-primary/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            setModalRechazar(null)
+            setMotivo('')
+          }}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-primary mb-2">Rechazar publicación</h3>
+            <p className="text-sm text-on-surface-variant mb-4">
+              Explica los cambios necesarios. El propietario podrá editarla y volver a enviarla.
+            </p>
+            <form
+              action={async (formData) => {
+                await rechazarPublicacionAction(formData)
+                setModalRechazar(null)
+                setMotivo('')
+              }}
+              className="space-y-4"
+            >
+              <input type="hidden" name="publicacion_id" value={modalRechazar} />
+              <textarea
+                name="motivo"
+                required
+                rows={3}
+                value={motivo}
+                onChange={(event) => setMotivo(event.target.value)}
+                placeholder="Indica qué información debe corregirse."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary outline-none text-sm resize-none"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalRechazar(null)
+                    setMotivo('')
+                  }}
+                  className="flex-1 border-2 border-gray-200 text-on-surface-variant py-2 rounded-lg hover:bg-gray-50 font-semibold text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!motivo.trim()}
+                  className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 font-semibold text-sm disabled:opacity-50"
+                >
+                  Rechazar
                 </button>
               </div>
             </form>

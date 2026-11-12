@@ -63,7 +63,7 @@ export default function LoginForm({ initialError }: { initialError?: string }) {
             <div className="relative w-full h-56 rounded-xl overflow-hidden shadow-md">
               <Image
                 src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-                alt="Apartamento moderno"
+                alt="Imagen ilustrativa de un apartamento"
                 fill
                 unoptimized
                 className="object-cover"
@@ -72,31 +72,27 @@ export default function LoginForm({ initialError }: { initialError?: string }) {
               <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/20 to-transparent" />
               <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white">
                 <div>
-                  <p className="text-[11px] text-white/80">Exclusividad Verificada</p>
-                  <p className="text-sm font-semibold">Torre Providencia · GDL</p>
-                </div>
-                <div className="flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-sm">
-                  <span className="text-rating-gold">★</span>
-                  <span className="text-xs font-semibold">4.98</span>
+                  <p className="text-[11px] text-white/80">Imagen ilustrativa</p>
+                  <p className="text-sm font-semibold">Espacios en Guadalajara</p>
                 </div>
               </div>
             </div>
 
             <blockquote>
-              <p className="text-sm text-white/90 italic leading-relaxed">
-                &quot;Encuentra tu próximo espacio favorito sin trámites eternos ni complicaciones.&quot;
+              <p className="text-sm text-white/90 leading-relaxed">
+                Consulta propiedades, administra solicitudes y organiza las visitas desde tu cuenta.
               </p>
             </blockquote>
           </div>
 
           <div className="pt-4 grid grid-cols-2 gap-3 bg-white/5 p-4 rounded-xl backdrop-blur-sm">
             <div>
-              <span className="text-xl font-bold text-white block">+14,000</span>
-              <span className="text-[11px] text-white/70">Contratos Seguros</span>
+              <span className="text-xl font-bold text-white block">Solicitudes</span>
+              <span className="text-[11px] text-white/70">Consulta su estado desde el dashboard</span>
             </div>
             <div>
-              <span className="text-xl font-bold text-white block">100%</span>
-              <span className="text-[11px] text-white/70">Inmuebles Auditados</span>
+              <span className="text-xl font-bold text-white block">Revisión</span>
+              <span className="text-[11px] text-white/70">Los anuncios nuevos requieren aprobación</span>
             </div>
           </div>
         </div>

@@ -120,7 +120,7 @@ export default function SolicitarRentaButton({
                 <div>
                   <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[11px] font-semibold mb-2">
                     <CheckCircle2 size={12} />
-                    Inmueble Certificado
+                    Solicitud de visita
                   </div>
                   <h2 className="text-xl font-bold text-primary">
                     Agendar visita guiada
@@ -164,10 +164,6 @@ export default function SolicitarRentaButton({
                     <Video size={14} />
                     Videollamada
                   </button>
-                </div>
-                <div className="hidden sm:flex items-center gap-1 text-status-success text-[11px] font-semibold">
-                  <CheckCircle2 size={14} />
-                  Confirmación instantánea
                 </div>
               </div>
             </div>
@@ -352,32 +348,9 @@ export default function SolicitarRentaButton({
                   </div>
                 </section>
 
-                {/* Beneficios */}
-                <section className="bg-surface-container-low rounded-xl p-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2 size={18} className="text-secondary flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-semibold text-primary">100% sin costo</p>
-                        <p className="text-on-surface-variant">Sin cobros ni compromiso</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2 size={18} className="text-secondary flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-semibold text-primary">Puntualidad</p>
-                        <p className="text-on-surface-variant">Aviso 2 hrs antes con GPS</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2 size={18} className="text-secondary flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-semibold text-primary">Reglas de visita</p>
-                        <p className="text-on-surface-variant">Máx. 2 personas, 10 min tolerancia</p>
-                      </div>
-                    </div>
-                  </div>
-                </section>
+                <p className="rounded-xl bg-surface-container-low p-3 text-xs text-on-surface-variant">
+                  La visita quedará registrada en los dashboards de ambas cuentas. El contacto del propietario se muestra cuando apruebe tu solicitud.
+                </p>
 
                 {/* Errores/Éxito */}
                 {state?.error && (

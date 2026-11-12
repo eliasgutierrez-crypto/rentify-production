@@ -36,7 +36,7 @@ export default function Hero() {
         <div className="relative z-10 w-full max-w-7xl mx-auto px-6 py-12 flex flex-col items-center text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/15 backdrop-blur-md text-white mb-4 shadow-sm">
             <span className="text-xs font-semibold tracking-wider uppercase">
-              Plataforma Residencial Certificada en México
+              Proyecto académico de rentas en Guadalajara
             </span>
           </div>
 
@@ -45,8 +45,7 @@ export default function Hero() {
           </h1>
 
           <p className="text-lg md:text-xl text-white/90 max-w-2xl font-light mb-10 leading-relaxed">
-            Renta departamentos y casas en las mejores zonas de Guadalajara
-            sin aval complicado ni trámites obsoletos.
+            Explora propiedades, revisa sus condiciones y coordina solicitudes y visitas.
           </p>
 
           <div className="w-full max-w-5xl bg-white rounded-full p-1.5 shadow-2xl flex flex-col lg:flex-row items-center justify-between gap-1">
@@ -143,16 +142,18 @@ export default function Hero() {
 
           <div className="flex flex-wrap items-center justify-center gap-6 mt-8 text-white/80 text-xs font-semibold">
             <span className="flex items-center gap-1">
-              <span className="text-rating-gold text-base">★</span>
-              Calificación 4.92/5 por más de 12,000 inquilinos
+              <span aria-hidden="true">✓</span>
+              Filtros para comparar propiedades
             </span>
             <span className="hidden sm:inline opacity-40">•</span>
             <span className="flex items-center gap-1">
-              ✓ Sin necesidad de escritura ni aval local
+              <span aria-hidden="true">✓</span>
+              Seguimiento de solicitudes y visitas
             </span>
             <span className="hidden sm:inline opacity-40">•</span>
             <span className="flex items-center gap-1">
-              ⚡ Aprobación ágil en 24 horas
+              <span aria-hidden="true">✓</span>
+              Anuncios sujetos a revisión administrativa
             </span>
           </div>
         </div>

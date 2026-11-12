@@ -13,6 +13,8 @@ Rentify es una aplicación web académica para descubrir y administrar inmuebles
 - [Tecnologías y arquitectura](#tecnologías-y-arquitectura)
 - [Modelo de datos](#modelo-de-datos)
 - [Requisitos](#requisitos)
+- [Matriz de requisitos](#matriz-de-requisitos)
+- [Operación y verificación de requisitos no funcionales](#operación-y-verificación-de-requisitos-no-funcionales)
 - [Configuración local](#configuración-local)
 - [Variables de entorno](#variables-de-entorno)
 - [Despliegue en Vercel](#despliegue-en-vercel)
@@ -39,6 +41,12 @@ El proyecto proporciona un flujo de renta de principio a fin para una aplicació
 
 El producto está orientado a Guadalajara y su zona metropolitana. No procesa pagos ni sustituye un contrato de arrendamiento; las solicitudes de la aplicación son herramientas de contacto y gestión.
 
+## Alcance del producto escolar
+
+Rentify es un prototipo académico ejecutable localmente. Su objetivo es demostrar los flujos principales, no operar como intermediario inmobiliario ni garantizar transacciones reales. No cobra rentas o depósitos, genera contratos, ofrece custodia de fondos, chat, avisos por SMS ni envío de alertas operativas por email.
+
+Para trabajar en local no hace falta comprar un dominio: `NEXT_PUBLIC_APP_URL` puede ser `http://localhost:3000`. Sí se necesita configurar PostgreSQL y un proyecto de Supabase para Auth y Storage; la confirmación y recuperación de contraseña dependen de que Supabase pueda entregar sus correos a la dirección de prueba.
+
 ## Funciones
 
 ### Exploración de inmuebles
@@ -46,7 +54,8 @@ El producto está orientado a Guadalajara y su zona metropolitana. No procesa pa
 - Página principal con acceso al catálogo.
 - Filtros de catálogo por ubicación, tipo, precio mínimo/máximo, habitaciones, baños, amenidades y reglas de mascotas/niños.
 - Ordenamiento y vistas de catálogo en cuadrícula, lista y mapa.
-- Página de detalle con fotografías, descripción, renta, depósito, reglas, amenidades, condiciones y ubicación en mapa cuando hay coordenadas.
+- Página de detalle con fotografías, descripción, renta, depósito, reglas, amenidades, condiciones y mapa cuando hay coordenadas.
+- Los datos directos de contacto de ambas partes solo se muestran después de aprobarse una solicitud. Antes de eso, se puede solicitar una visita y consultar el estado desde el dashboard.
 - Calificaciones de inmuebles basadas en evaluaciones de experiencias de renta finalizadas.
 - Opción para reportar una publicación.
 
@@ -63,16 +72,17 @@ El producto está orientado a Guadalajara y su zona metropolitana. No procesa pa
 ### Publicación y renta
 
 - Creación y edición de inmuebles y sus publicaciones.
-- Administración de precio de renta, depósito, descripción, reglas, fotografías, amenidades, servicios y plazo mínimo.
+- Administración de precio de renta, depósito, descripción, reglas, fotografías por URL, amenidades, servicios y plazo mínimo.
+- Las publicaciones nuevas quedan pendientes de revisión. Un administrador puede aprobarlas o rechazarlas con motivo; el propietario puede corregir y reenviar una publicación rechazada. Las publicaciones existentes conservan su estado.
 - Cambio del estado de inventario entre disponible, en negociación, rentado y pausado. El borrado retira la publicación del catálogo y del dashboard, conservando los registros relacionados.
 - Solicitudes de renta que el propietario puede revisar, aprobar o rechazar.
-- Agendamiento de visitas con fecha, hora y modalidad; los propietarios configuran los días y el horario semanal de cada inmueble.
-- Dashboard con la actividad de las cuentas, propiedades y solicitudes.
-- Evaluaciones asociadas a experiencias de renta.
+- Agendamiento de visitas presenciales o por videollamada; los propietarios configuran franjas semanales. El sistema revisa disponibilidad y conflictos, pero no genera el enlace de videollamada.
+- Dashboard del inquilino con solicitudes, visitas y rentas activas; dashboard del propietario con estado del inventario, solicitudes, rentas y visitas recibidas.
+- Evaluaciones asociadas a rentas finalizadas. El inmueble recibe una calificación general; la calificación del propietario promedia atención, mantenimiento y cumplimiento, y la del inquilino promedia puntualidad, cuidado e higiene.
 
 ### Administración
 
-- Moderación: suspender, reactivar o retirar publicaciones.
+- Moderación: aprobar/rechazar publicaciones pendientes, suspender/reactivar publicaciones activas y retirar publicaciones.
 - Verificación: revisar y aprobar o rechazar documentos.
 - Reportes: resolver o descartar reportes recibidos.
 - Cuentas: bloquear y desbloquear usuarios.
@@ -91,6 +101,25 @@ El producto está orientado a Guadalajara y su zona metropolitana. No procesa pa
 Una cuenta puede ser propietaria e inquilina al mismo tiempo. El perfil se crea cuando se necesita; por ejemplo, algunas acciones crean el perfil de inquilino automáticamente si todavía no existe.
 
 Las rutas `/dashboard` y `/perfil` requieren sesión. La administración no depende únicamente de ocultar una pantalla: las acciones administrativas verifican el rol en el servidor antes de modificar información.
+
+### Ciclo de una publicación
+
+1. El propietario captura la información y agrega al menos una URL de imagen.
+2. La publicación se guarda como `pendiente_revision` y no aparece en el catálogo público.
+3. Un administrador la aprueba o la rechaza con un motivo desde `/dashboard/admin`.
+4. Si se aprueba, cambia a `activa` y aparece en búsqueda. Si se rechaza, el propietario ve el motivo en su dashboard, edita y guarda para volver a enviarla a revisión.
+5. Las publicaciones que ya estaban activas antes de este flujo no se cambian retroactivamente.
+
+La aprobación de una publicación es independiente de la verificación de identidad o del documento de propiedad. Cada verificación se refleja con su propio estado; no se debe interpretar como validación legal integral del anuncio.
+
+### Privacidad de contacto
+
+- La ficha pública no publica el correo ni el teléfono del propietario.
+- Cuando el propietario aprueba la solicitud, el inquilino solicitante ve sus datos de contacto en la ficha.
+- El propietario ve el correo y teléfono del solicitante en la solicitud aprobada de su dashboard.
+- Las solicitudes pendientes no incluyen esos datos en los props enviados al componente del navegador.
+
+Estos datos permiten que las partes coordinen directamente después de aceptar la solicitud. Rentify no proporciona chat ni mediación de mensajes.
 
 ## Rutas de la aplicación
 
@@ -141,6 +170,7 @@ La interfaz está en español. Las rutas dinámicas usan el identificador de la 
 - `src/lib/supabase-admin.ts` limita las operaciones privilegiadas de Storage al servidor.
 - `src/lib/prisma.ts` comparte el cliente de Prisma durante el desarrollo para reducir conexiones durante las recargas.
 - `src/lib/disponibilidad-visitas.ts` valida disponibilidad y conflictos de agenda; `src/lib/notificaciones.ts` registra avisos internos.
+- `src/lib/ubicacion-publica.ts` deriva una zona aproximada y redondea las coordenadas enviadas a las páginas públicas.
 - `src/lib/estados-mexico.ts` centraliza los estados disponibles para el registro.
 - `src/proxy.ts` actualiza las cookies y protege rutas privadas; cada Server Action vuelve a comprobar la identidad y los permisos.
 - Las mutaciones revalidan las rutas afectadas para refrescar el contenido del dashboard y de las páginas públicas.
@@ -157,7 +187,79 @@ El esquema está en [`prisma/schema.prisma`](./prisma/schema.prisma). Sus entida
 | Solicitudes y visitas | `SolicitudRenta`, `Visita`, `ExperienciaRenta`, `Evaluacion` | Solicitud, agenda de visitas y evaluaciones vinculadas a una experiencia de renta. |
 | Actividad y moderación | `Notificacion`, `Reporte`, `Moderacion` | Avisos internos, reportes de publicaciones y acciones administrativas. |
 
-Los estados de roles, publicaciones, solicitudes y documentos se guardan como cadenas en el esquema. Las relaciones y eliminaciones en cascada se definen en Prisma; consulta el esquema y las migraciones para conocer la estructura exacta vigente.
+Los estados de roles, publicaciones, solicitudes y documentos se guardan como cadenas en el esquema. Estados de publicación usados por la aplicación: `pendiente_revision`, `activa`, `rechazada`, `suspendida` y `eliminada`. El estado del inventario es independiente: `disponible`, `en_negociacion`, `rentado` o `pausado`. Las evaluaciones de propietario e inquilino guardan tres criterios de 1 a 5 y calculan el promedio por evaluación; las evaluaciones antiguas sin criterios conservan su calificación general. Las relaciones y eliminaciones en cascada se definen en Prisma; consulta el esquema y las migraciones para conocer la estructura exacta vigente.
+
+## Matriz de requisitos
+
+Esta matriz describe lo que hace el código del repositorio. “Configuración externa” significa que el código no puede garantizar por sí solo el servicio, la disponibilidad o los permisos del proveedor.
+
+| ID | Estado | Implementación / límite conocido |
+| --- | --- | --- |
+| RF01 | Implementado | Inicio con correo y contraseña mediante Supabase Auth. |
+| RF02 | Implementado con dependencia externa | Solicitud de enlace y cambio de contraseña; el envío requiere que el proveedor Auth entregue el correo. |
+| RF03 | Implementado | Cookies SSR de Supabase y acción explícita de cierre de sesión. |
+| RF04 | Implementado | Registro, perfil y carga de documentos personales para revisión manual. |
+| RF05 | Implementado | Referencias, verificación e historial de experiencias se muestran al propietario que revisa una solicitud. |
+| RF06 | Implementado | El dashboard del inquilino muestra solicitudes, visitas y rentas activas. No se genera un contrato legal. |
+| RF07 | Implementado | El propietario adjunta documentos del inmueble; un administrador los aprueba o rechaza. Esto no sustituye una validación ante autoridades. |
+| RF08 | Implementado | El propietario aprueba o rechaza solicitudes de renta. |
+| RF09 | Implementado | El dashboard del propietario resume estados del inventario y visitas recibidas, además de mostrar las listas de actividad. |
+| RF10 | Implementado | Las publicaciones nuevas esperan aprobación administrativa; el admin puede rechazar con motivo, suspender, reactivar o retirar. Las publicaciones existentes conservan su estado. |
+| RF11 | Implementado | El panel administrativo revisa documentos privados mediante enlaces firmados de cinco minutos. |
+| RF12 | Implementado | Reportes, resolución, bloqueo y desbloqueo administrativo de cuentas. |
+| RF13 | Implementado | Búsqueda por precio, ubicación, tipo, habitaciones, baños, amenidades y reglas. |
+| RF14 | Implementado | Ficha con galería, características, precio, condiciones, zona y mapa aproximados; contacto directo después de aprobarse la solicitud. |
+| RF15 | Implementado | Catálogo en cuadrícula, lista y mapa. |
+| RF16 | Implementado con límite | Publicación de fotos mediante URLs HTTP/HTTPS, no carga directa de fotos del anuncio. Los documentos sí se cargan a Storage. |
+| RF17 | Implementado | Estados del inventario disponibles en el dashboard del propietario. |
+| RF18 | Implementado parcialmente | Franjas semanales, elección de fecha/hora próxima y modalidad presencial o videollamada. No hay excepciones por fecha, feriados ni creación del enlace de videollamada. |
+| RF19 | Implementado | El inquilino califica el inmueble de 1 a 5 y agrega comentario al finalizar la renta. |
+| RF20 | Implementado | El inquilino evalúa atención, mantenimiento y cumplimiento; el promedio de los tres es la calificación de la evaluación. |
+| RF21 | Implementado | El propietario evalúa puntualidad de pagos, cuidado e higiene; el promedio de los tres es la calificación de la evaluación. |
+| RF22 | Excluido por decisión del proyecto | No se envían alertas operativas por email; se muestran en Rentify. Confirmación y recuperación de cuenta sí usan correo de Supabase Auth. |
+| RF23 | Implementado dentro de la app | Se crean notificaciones internas ante eventos operativos. No hay eventos de mensajería porque la aplicación no tiene chat. |
+| RF24 | Excluido junto con el correo operativo | No existe configuración de preferencias de email, dado que las notificaciones operativas son internas y no se despachan por correo. |
+| RNF-01 | Pendiente de medición | El formulario de documento limita el archivo a 5 MB en cliente. No hay medición que demuestre búsqueda menor a 2 s o carga menor a 3 s. |
+| RNF-02 | Parcial / configuración externa | Supabase Auth gestiona credenciales y los documentos usan bucket privado previsto. HTTPS/TLS, políticas efectivas de Storage y protección de secretos dependen de la configuración de despliegue. |
+| RNF-03 | No configurado en el repositorio | No hay garantía de 99% ni rutina de respaldo automático para base de datos y Storage. Deben configurarse y probarse en los proveedores elegidos. |
+| RNF-04 | Parcial | Hay clases responsivas y publicar usa tres pasos. No se ha certificado accesibilidad ni se han realizado pruebas de usabilidad. |
+| RNF-05 | Parcial | Rutas y acciones están separadas por dominio y este README documenta flujos y operación. No hay suite automatizada ni un módulo independiente por cada uno de los siete módulos funcionales. |
+
+Los requisitos de servicio (tiempos, uptime, TLS, backups) requieren pruebas y configuración del entorno, no solo cambios en TypeScript. No se deben presentar como garantizados hasta tener evidencia de su medición y restauración.
+
+## Operación y verificación de requisitos no funcionales
+
+### Rendimiento
+
+- **Búsqueda menor a 2 segundos:** el catálogo limita el resultado a 100 publicaciones, pero el tiempo real depende de PostgreSQL, volumen de datos, conexión y despliegue. Medir varias búsquedas con datos representativos, en frío y en caliente; registrar percentiles y no solo una petición aislada.
+- **Carga de hasta 5 MB menor a 3 segundos:** el formulario de documentos comprueba tamaño en el navegador; Storage y la red controlan la duración real. Probar un archivo de 5 MB desde la red objetivo y revisar la configuración de tamaño y MIME del bucket.
+- No afirmar cumplimiento de estos tiempos sin resultados medidos en el entorno que se va a evaluar. El repositorio no incluye una prueba de carga.
+
+### Seguridad y privacidad
+
+- Las contraseñas nuevas las administra Supabase Auth; `bcryptjs` permanece para verificar contraseñas de perfiles heredados durante la vinculación.
+- Mantener `DATABASE_URL`, `DIRECT_URL` y `SUPABASE_SERVICE_ROLE_KEY` fuera del navegador y del control de versiones. La clave `NEXT_PUBLIC_SUPABASE_ANON_KEY` es pública, por lo que las políticas del bucket y la autorización del servidor siguen siendo obligatorias.
+- Mantener el bucket privado y revisar sus políticas desde Supabase. Solo el administrador de Rentify debe recibir URL temporal de lectura de documentos. No usar documentos reales en una demo.
+- En un despliegue, confirmar que todo el tráfico se redirija a HTTPS y que el proveedor realmente negocie TLS 1.3. El código de Next.js no instala certificados ni fuerza esa versión del protocolo.
+- Las páginas públicas muestran la zona aproximada derivada de los últimos segmentos de la dirección y redondean latitud/longitud a dos decimales. El dashboard del propietario conserva la dirección capturada. La dirección debe escribirse con comas para que la zona se derive correctamente.
+
+### Disponibilidad y respaldos
+
+- El repositorio no configura uptime, monitoreo, backups programados ni restauración. En local, esos objetivos dependen de la computadora, PostgreSQL y el Storage usados.
+- Para un despliegue, elegir una retención y frecuencia de backup para **PostgreSQL y Storage por separado**, habilitar el monitoreo que ofrezca el proveedor y definir quién recibe alertas.
+- Antes de afirmar un 99% de disponibilidad, definir periodo, ventana de mantenimiento y método de medición; conservar los reportes del proveedor.
+- Hacer una restauración de prueba en una base y bucket separados antes de confiar en los backups. Una copia que nunca se ha restaurado no demuestra que sea recuperable.
+
+### Usabilidad y accesibilidad
+
+- Publicar utiliza tres pasos; la solicitud de visita concentra la selección de fecha/hora y los datos en un diálogo. No se ha medido el requisito de cuatro pasos con usuarios.
+- Verificar manualmente móvil, tableta y escritorio, además de teclado, foco, etiquetas de formularios, contraste y lector de pantalla. No hay certificación WCAG ni pruebas automáticas de accesibilidad configuradas.
+
+### Mantenibilidad
+
+- Los cambios de datos se agrupan por dominio en `src/app/actions`; los modelos y migraciones están en `prisma`.
+- Las instrucciones de instalación, estados y límites están en este documento. Mantener README, esquema y migraciones sincronizados al cambiar flujos.
+- No hay suite automatizada de pruebas; cada cambio debe pasar como mínimo la validación Prisma, TypeScript, lint y build descritas abajo, más una prueba manual del flujo afectado.
 
 ## Requisitos
 
@@ -242,7 +344,7 @@ Los puertos y parámetros dependen de tu proveedor. Si usas Supabase, utiliza la
 
 ## Despliegue en Vercel
 
-1. Importa el repositorio en Vercel y configura **Root Directory** como `rentify`, el directorio que contiene `package.json`.
+1. Importa el repositorio en Vercel y configura **Root Directory** como `rentify`, el directorio que contiene `package.json`. No hace falta comprar un dominio propio para una demostración: se puede usar el dominio asignado por la plataforma, si está disponible para el proyecto.
 2. Agrega en las variables de entorno de Vercel todas las variables marcadas como obligatorias en la tabla anterior. Configúralas para los entornos que vayas a utilizar (Preview y Production); no conectes Preview a una base de producción. Define `NEXT_PUBLIC_APP_URL` con el dominio público estable de Production (por ejemplo, `https://rentify.vercel.app`); si falta o conserva `http://localhost:3000`, la aplicación usa el dominio de Vercel automáticamente.
 3. En Supabase Auth, establece como **Site URL** el dominio público final y agrega `https://TU-DOMINIO/auth/callback` a **Redirect URLs**. Para despliegues de Preview, permite explícitamente los dominios de Preview necesarios; Supabase debe aceptar la URL de callback que Vercel genere.
 4. Antes de recibir tráfico con el nuevo esquema, ejecuta `npx prisma migrate deploy` con las variables de base de datos del entorno de destino. Haz una copia de seguridad y revisa el estado de migraciones primero; no ejecutes `migrate dev` en producción.
@@ -254,6 +356,8 @@ Mantén `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` y `DIRECT_URL` como secretos
 ## Base de datos y datos de demostración
 
 Las migraciones versionadas están en `prisma/migrations/`. La configuración de Prisma define PostgreSQL y lee `DATABASE_URL` y `DIRECT_URL` desde el entorno.
+
+La migración `20261111201500_aprobacion_y_criterios_evaluacion` agrega el motivo de rechazo de publicaciones y los criterios de evaluación. Para probarla, confirma primero que `.env` apunta a una base local o de pruebas y ejecuta `npx prisma migrate deploy`. No se ha aplicado automáticamente a ninguna base. Antes de usarla en otro entorno, revisa el destino y el respaldo disponible; no uses `migrate dev` en producción.
 
 ```bash
 # Crear una migración nueva y aplicarla en desarrollo
@@ -276,8 +380,8 @@ El seed crea perfiles de Rentify en PostgreSQL, **no identidades de Supabase Aut
 ## Supabase Storage y documentos
 
 1. Crea un bucket llamado `rentify` en el proyecto Supabase configurado.
-2. Configura el bucket como **privado**. La aplicación carga archivos bajo `documentos/{auth.uid()}/` y guarda solo la ruta del objeto, no un enlace público o firmado, en PostgreSQL.
-3. El formulario acepta PDF, JPG y PNG, con un límite de 5 MB por archivo.
+2. Configura el bucket como **privado**, el límite de tamaño del bucket en 5 MB y los tipos permitidos en PDF, JPEG y PNG. La validación del formulario ayuda a la experiencia, pero los límites del bucket son necesarios porque las validaciones del navegador se pueden omitir.
+3. La aplicación carga archivos bajo `documentos/{auth.uid()}/` y guarda solo la ruta del objeto, no una URL, en PostgreSQL.
 4. Crea una política de inserción para que cada usuario autenticado solo pueda cargar archivos en su propia carpeta. Por ejemplo:
 
    ```sql
@@ -290,9 +394,10 @@ El seed crea perfiles de Rentify en PostgreSQL, **no identidades de Supabase Aut
    );
    ```
 
-5. Los documentos aparecen como pendientes para revisión administrativa. El servidor usa `SUPABASE_SERVICE_ROLE_KEY` para generar enlaces firmados de cinco minutos en el panel de revisión.
+5. No crees políticas públicas de lectura ni de lectura para el rol `authenticated`. El panel administrativo usa `SUPABASE_SERVICE_ROLE_KEY`, solo en servidor, para generar enlaces firmados que expiran en cinco minutos.
+6. La acción de servidor comprueba que la ruta pertenezca a la carpeta del usuario y que la extensión sea permitida antes de registrar el documento. La política y el límite de tamaño/MIME del bucket también deben estar activos en Supabase.
 
-No habilites lectura pública, y no expongas la clave service role al navegador. Si agregas operaciones de descarga para los usuarios, crea políticas de lectura limitadas a su propia carpeta.
+No habilites lectura pública ni expongas la clave service role al navegador. Actualmente el usuario puede consultar el estado de revisión, pero no descargar el documento desde su perfil. Si en el futuro se agrega esa función, implementar una autorización y una URL firmada limitada al propietario.
 
 ## Cuentas de demostración
 
@@ -311,22 +416,24 @@ También se crean cuentas de ejemplo para las reseñas. Todas estas credenciales
 
 Rentify usa Supabase Auth para registro, inicio/cierre de sesión, confirmación de correo, recuperación y cambio de contraseña. El Proxy y las Server Actions validan las sesiones con Supabase; los perfiles y roles de la aplicación continúan en PostgreSQL mediante Prisma. Las identidades se vinculan con `Usuario.auth_user_id`.
 
+La decisión de no pagar un dominio aplica a las **alertas operativas**: solicitudes, visitas, evaluaciones, moderación y reportes se guardan en la base de datos y se muestran en el dashboard, no se envían por correo. Esto no elimina los correos de confirmación y recuperación que pide Supabase Auth. Para usar estos dos flujos, Supabase debe poder enviar un mensaje a la dirección de prueba. En local el callback puede ser `http://localhost:3000/auth/callback`; no hace falta comprar un dominio para ese callback. La entrega depende de los límites y la configuración vigentes del proveedor Auth.
+
 ### Configurar los correos de Supabase Auth
 
-1. En Supabase, habilita el proveedor de correo/contraseña y exige confirmar la dirección antes de iniciar sesión.
-2. En la configuración de URL de Auth, establece como Site URL el dominio público de Rentify (el de Vercel en producción) y permite la redirección `https://tu-dominio/auth/callback` (en local, `http://localhost:3000/auth/callback`).
+1. En Supabase, habilita el proveedor de correo/contraseña. La confirmación antes del inicio de sesión depende de la opción de confirmación de email que configures en el proyecto Supabase.
+2. En la configuración de URL de Auth, establece el Site URL correspondiente al entorno y permite explícitamente el callback local `http://localhost:3000/auth/callback`. Si después se despliega públicamente, agrega también el callback HTTPS que use ese despliegue.
 3. Configura las plantillas de confirmación y recuperación para usar `{{ .ConfirmationURL }}`; comprueba que la redirección llegue a `/auth/callback` y que recuperación termine en `/restablecer`.
-4. El proveedor de correo predeterminado de Supabase tiene límites de entrega y es adecuado principalmente para pruebas. Para producción, revisa la documentación y los límites vigentes de Supabase; si necesitas entrega confiable, tendrás que configurar un SMTP externo con un remitente autorizado.
+4. Prueba los mensajes con una cuenta de prueba propia. El proveedor predeterminado de Supabase puede tener restricciones de destinatarios y cuotas. No se garantiza entrega si no se configura un proveedor compatible. Para un entorno público, verifica las condiciones del proveedor y su dominio remitente; el proyecto no incluye ni paga un dominio o un SMTP.
 
-Si la solicitud de recuperación falla, revisa **Supabase → Authentication → Logs**. Un error `redirect_to_not_allowed` significa que falta la URL exacta `https://TU-DOMINIO/auth/callback` en **Redirect URLs**; `smtp_setup_required` o `unexpected_failure` apuntan a la configuración/límites del proveedor de correo. La página que recibe el enlace es `/restablecer`; no es necesario crear otra ruta.
+Si el registro o la recuperación falla, revisa **Supabase → Authentication → Logs**. Un error `redirect_to_not_allowed` significa que falta la URL exacta de callback en **Redirect URLs**; `smtp_setup_required` o `unexpected_failure` apuntan a la configuración o límites del proveedor. La página de recuperación es `/restablecer`; el callback es `/auth/callback`.
 
-Los correos de confirmación y recuperación los envía Supabase Auth. Los eventos operativos (solicitudes, visitas, evaluaciones, documentos, moderación y reportes) se guardan como notificaciones dentro de Rentify y se muestran en el dashboard; no se envían por correo. Las preferencias previas de notificación por email ya no aplican.
+Los eventos operativos se guardan como notificaciones internas; no hay envío, preferencias ni bandeja de correo operativo. Actualmente el dashboard muestra las cinco más recientes y no incluye acción para marcarlas como leídas.
 
 Si el registro falla, revisa el mensaje del formulario y los eventos en **Authentication → Logs**. Un error `401` suele significar que Supabase rechazó la clave de API: comprueba que la clave pública vigente pertenezca al mismo proyecto de `NEXT_PUBLIC_SUPABASE_URL`, que no se haya usado `service_role`, y reinicia Next.js después de modificar `.env`. Un error de límite requiere esperar; un fallo de envío de confirmación requiere revisar la configuración y los límites de correo de Supabase. Las migraciones nuevas se aplican con `npx prisma migrate deploy` en la base de pruebas antes de registrar.
 
 Las cuentas previas de Rentify se pueden vincular al iniciar sesión si su contraseña heredada es válida y su correo todavía no tiene una identidad incompatible en Supabase. La primera vinculación requiere confirmar el correo. Si Supabase ya tiene una identidad para ese correo, usa el flujo de recuperación de Supabase antes de volver a iniciar sesión.
 
-Las sesiones y su duración se administran mediante Supabase Auth y cookies SSR; no se necesita configurar un `JWT_SECRET` propio. Un usuario bloqueado no puede entrar a las áreas protegidas ni ejecutar acciones de servidor.
+Las sesiones y su duración se administran mediante Supabase Auth y cookies SSR; no se necesita configurar un `JWT_SECRET` propio. Un usuario bloqueado no puede usar los flujos protegidos de la aplicación ni ejecutar acciones autorizadas.
 
 El cliente anon de Storage permite subir únicamente a `documentos/{auth.uid()}/` si se instaló la política indicada arriba. El panel de administración firma accesos privados en servidor con la service role. Mantén el bucket privado y limita su clave a entornos de servidor.
 
@@ -344,6 +451,19 @@ El cliente anon de Storage permite subir únicamente a `documentos/{auth.uid()}/
 | `npx prisma migrate dev` | Crear/aplicar migraciones en desarrollo. |
 | `npx prisma migrate deploy` | Aplicar migraciones existentes en un despliegue. |
 | `npm run db:seed` | Borrar y volver a cargar datos de demostración. |
+
+### Prueba manual recomendada para la entrega
+
+1. Confirma que las variables estén en `.env`, aplica migraciones y levanta la app con `npm run dev`.
+2. Prueba registro, confirmación (si Supabase puede entregar el correo), inicio de sesión, cierre y recuperación.
+3. Como propietario, crea un anuncio. Debe quedar pendiente y no aparecer en `/propiedades`.
+4. Como administrador, revisa el anuncio desde `/dashboard/admin`; apruébalo y confirma que aparezca en el catálogo. Repite con otro anuncio y recházalo indicando el motivo.
+5. Como propietario, revisa el motivo del rechazo, edita y guarda; debe regresar a revisión. Prueba también suspender, reactivar y retirar una publicación.
+6. Desde otra cuenta, envía una solicitud y agenda una visita. Confirma que ambos dashboards muestren el evento y que el propietario pueda aprobar/rechazar la solicitud.
+7. Confirma que el correo/teléfono del propietario solo aparezca al solicitante después de la aprobación, y que el contacto del solicitante solo aparezca en la solicitud aprobada del propietario.
+8. Finaliza una renta, registra calificaciones de inmueble, propietario e inquilino, y revisa que los tres criterios del propietario/inquilino produzcan el promedio mostrado.
+9. Sube un documento ficticio menor a 5 MB; comprueba que sea privado y que solo la vista administrativa pueda abrir su enlace firmado temporal.
+10. Prueba el catálogo y los formularios en móvil y escritorio. Registra por separado los tiempos de búsqueda y carga si la rúbrica los exige.
 
 No hay un comando ni una suite de pruebas automatizadas configurados actualmente.
 
@@ -406,7 +526,7 @@ Las acciones de servidor están separadas por dominio:
 - El dashboard muestra un número limitado de notificaciones recientes; no hay una bandeja completa ni una acción para marcar cada aviso como leído.
 - Los horarios de visita son una franja semanal por día de la semana; no existe calendario de excepciones, feriados ni disponibilidad por fecha.
 - La foto de perfil y las fotos de publicaciones se capturan como URLs; solo los documentos de verificación usan Storage privado.
-- Algunos textos promocionales y cifras de portada/inicio de sesión son datos demostrativos estáticos, no métricas calculadas ni garantías operativas. La interfaz incluye textos de confianza que deben revisarse antes de presentarla como servicio real.
+- Las cifras, calificaciones y testimonios promocionales que no provenían de datos fueron retirados de la portada y del inicio de sesión. Algunas imágenes externas de esas pantallas son ilustrativas y no representan necesariamente inmuebles publicados.
 - No se ha configurado una suite de pruebas automatizadas.
 - El seed es destructivo y las cuentas de prueba tienen contraseñas conocidas.
 - El panel de guía contiene actualmente contenido introductorio básico.

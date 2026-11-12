@@ -14,8 +14,24 @@ export default function SeguridadPage() {
       </div>
       <div className="max-w-3xl mx-auto px-6 py-16 text-center">
         <ShieldCheck size={64} className="mx-auto text-[#3A4D39] mb-6" />
-        <h1 className="text-3xl font-bold text-[#1F1F1F] mb-4">Seguridad Rentify</h1>
-        <p className="text-gray-600">Verificamos a todos los propietarios e inquilinos para garantizar rentas seguras.</p>
+        <h1 className="text-3xl font-bold text-[#1F1F1F] mb-4">Seguridad y privacidad</h1>
+        <div className="space-y-4 text-left text-gray-600">
+          <p>
+            Rentify no verifica automáticamente a todas las personas ni garantiza el resultado
+            de una renta. Los documentos enviados para revisión deben ser validados manualmente
+            por una cuenta administradora.
+          </p>
+          <p>
+            El contacto del propietario se muestra al inquilino después de que su solicitud
+            sea aprobada. Los documentos de identidad y propiedad no deben publicarse como
+            imágenes de una ficha pública; el acceso seguro a los archivos también depende de
+            configurar correctamente el almacenamiento privado del entorno.
+          </p>
+          <p>
+            Rentify es un proyecto académico: no procesa pagos, no genera contratos y no
+            sustituye la revisión legal de un arrendamiento.
+          </p>
+        </div>
       </div>
     </main>
   )

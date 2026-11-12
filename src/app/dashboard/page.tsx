@@ -51,19 +51,34 @@ async function DashboardContent() {
       })
     : []
 
-  const rentasActivas = usuario.propietario
+  const rentasActivas = usuario.propietario || usuario.inquilino
     ? await prisma.experienciaRenta.findMany({
         where: {
           estado: 'activa',
-          solicitud: {
-            publicacion: { inmueble: { propietario_id: usuario.propietario.usuario_id } },
-          },
+          OR: [
+            ...(usuario.inquilino ? [{ solicitud: { inquilino_id: usuario.id } }] : []),
+            ...(usuario.propietario
+              ? [{
+                  solicitud: {
+                    publicacion: {
+                      inmueble: { propietario_id: usuario.propietario.usuario_id },
+                    },
+                  },
+                }]
+              : []),
+          ],
         },
         include: {
           solicitud: {
             include: {
               inquilino: { include: { usuario: true } },
-              publicacion: { include: { inmueble: true } },
+              publicacion: {
+                include: {
+                  inmueble: {
+                    include: { propietario: { include: { usuario: true } } },
+                  },
+                },
+              },
             },
           },
         },
@@ -321,6 +336,20 @@ async function DashboardContent() {
             </span>
           </div>
 
+          <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+            {[
+              ['Disponibles', misInmuebles.filter((inmueble) => inmueble.estado_inventario === 'disponible').length],
+              ['En negociación', misInmuebles.filter((inmueble) => inmueble.estado_inventario === 'en_negociacion').length],
+              ['Rentados', misInmuebles.filter((inmueble) => inmueble.estado_inventario === 'rentado').length],
+              ['Visitas recibidas', visitasRecibidas.length],
+            ].map(([label, total]) => (
+              <div key={label} className="rounded-xl bg-white p-4 shadow-sm">
+                <p className="text-xs text-on-surface-variant">{label}</p>
+                <p className="mt-1 text-2xl font-bold text-primary">{total}</p>
+              </div>
+            ))}
+          </div>
+
           {misInmuebles.length === 0 ? (
             <div className="bg-white rounded-xl p-8 text-center shadow-sm">
               <Home size={48} className="mx-auto text-gray-300 mb-3" />
@@ -348,9 +377,28 @@ async function DashboardContent() {
                     </div>
                     <p className="text-xs text-on-surface-variant truncate">{inm.direccion}</p>
                     {inm.publicaciones[0] && (
-                      <p className="text-sm font-semibold text-secondary mt-2">
-                        ${inm.publicaciones[0].precio_renta.toLocaleString('en-US')} MXN
-                      </p>
+                      <>
+                        <p className="text-sm font-semibold text-secondary mt-2">
+                          ${inm.publicaciones[0].precio_renta.toLocaleString('en-US')} MXN
+                        </p>
+                        <p className="mt-1 text-xs text-on-surface-variant">
+                          Publicación:{' '}
+                          {inm.publicaciones[0].estado === 'pendiente_revision'
+                            ? 'Pendiente de revisión'
+                            : inm.publicaciones[0].estado === 'rechazada'
+                              ? 'Rechazada'
+                              : inm.publicaciones[0].estado === 'suspendida'
+                                ? 'Suspendida'
+                                : inm.publicaciones[0].estado === 'eliminada'
+                                  ? 'Retirada'
+                                  : 'Activa'}
+                        </p>
+                        {inm.publicaciones[0].motivo_rechazo && (
+                          <p className="mt-1 text-xs text-red-700">
+                            Motivo: {inm.publicaciones[0].motivo_rechazo}
+                          </p>
+                        )}
+                      </>
                     )}
 
                     <CambiarEstadoInmuebleForm
@@ -428,6 +476,12 @@ async function DashboardContent() {
                     experiencias:
                       experienciasPorInquilino.get(sol.inquilino_id) ?? [],
                   },
+                  ...(sol.estado === 'aprobada'
+                    ? {
+                        inquilino_correo: sol.inquilino.usuario.correo,
+                        inquilino_telefono: sol.inquilino.usuario.telefono,
+                      }
+                    : {}),
                 }}
               />
             ))}
@@ -588,32 +642,42 @@ async function DashboardContent() {
             </div>
           )}
 
-          {usuario.propietario && rentasActivas.length > 0 && (
-            <section>
-              <h2 className="mb-4 text-xl font-bold text-primary">Contratos activos</h2>
-              <div className="space-y-3">
-                {rentasActivas.map((renta) => (
-                  <div key={renta.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-4 shadow-sm">
-                    <div>
-                      <p className="font-semibold text-primary">
-                        {renta.solicitud.publicacion.inmueble.tipo_inmueble} · {renta.solicitud.inquilino.usuario.nombre} {renta.solicitud.inquilino.usuario.apellido}
-                      </p>
-                      <p className="text-xs text-on-surface-variant">
-                        Inicio: {new Date(renta.fecha_inicio).toLocaleDateString('es-MX')}
-                      </p>
-                    </div>
+        </div>
+      )}
+
+      {rentasActivas.length > 0 && (
+        <section>
+          <h2 className="mb-4 text-xl font-bold text-primary">Rentas activas</h2>
+          <div className="space-y-3">
+            {rentasActivas.map((renta) => {
+              const esPropietario = renta.solicitud.publicacion.inmueble.propietario_id === usuario.id
+              const contraparte = esPropietario
+                ? `${renta.solicitud.inquilino.usuario.nombre} ${renta.solicitud.inquilino.usuario.apellido}`
+                : `${renta.solicitud.publicacion.inmueble.propietario.usuario.nombre} ${renta.solicitud.publicacion.inmueble.propietario.usuario.apellido}`
+
+              return (
+                <div key={renta.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-4 shadow-sm">
+                  <div>
+                    <p className="font-semibold text-primary">
+                      {renta.solicitud.publicacion.inmueble.tipo_inmueble} · {contraparte}
+                    </p>
+                    <p className="text-xs text-on-surface-variant">
+                      Inicio: {new Date(renta.fecha_inicio).toLocaleDateString('es-MX')}
+                    </p>
+                  </div>
+                  {esPropietario && (
                     <form action={finalizarRentaAction}>
                       <input type="hidden" name="experiencia_id" value={renta.id} />
                       <button className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white">
                         Finalizar renta
                       </button>
                     </form>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </section>
       )}
 
       {!usuario.propietario && !usuario.inquilino && !usuario.administrador && (

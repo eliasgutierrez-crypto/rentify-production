@@ -152,6 +152,7 @@ export async function aprobarSolicitudAction(formData: FormData) {
   })
 
   revalidatePath('/dashboard')
+  revalidatePath(`/propiedad/${solicitud.publicacion_id}`)
 }
 
 export async function finalizarRentaAction(formData: FormData) {

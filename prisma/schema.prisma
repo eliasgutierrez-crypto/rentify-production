@@ -157,6 +157,7 @@ model Publicacion {
   motivo_suspension String?
   suspendida_por    Int?
   fecha_suspension  DateTime?
+  motivo_rechazo    String?
 
   inmueble    Inmueble         @relation(fields: [inmueble_id], references: [id], onDelete: Cascade)
   fotos       Foto[]
@@ -266,13 +267,19 @@ model ExperienciaRenta {
 }
 
 model Evaluacion {
-  id                   Int      @id @default(autoincrement())
-  experiencia_renta_id Int
-  usuario_evaluador_id Int
-  tipo_evaluacion      String
-  calificacion         Int
-  comentario           String?
-  fecha_evaluacion     DateTime @default(now())
+  id                         Int      @id @default(autoincrement())
+  experiencia_renta_id       Int
+  usuario_evaluador_id       Int
+  tipo_evaluacion            String
+  calificacion               Float
+  comentario                 String?
+  fecha_evaluacion           DateTime @default(now())
+  calificacion_atencion      Int?
+  calificacion_mantenimiento Int?
+  calificacion_cumplimiento  Int?
+  calificacion_puntualidad   Int?
+  calificacion_cuidado       Int?
+  calificacion_higiene       Int?
 
   experiencia       ExperienciaRenta @relation(fields: [experiencia_renta_id], references: [id], onDelete: Cascade)
   usuario_evaluador Usuario          @relation("UsuarioEvaluador", fields: [usuario_evaluador_id], references: [id])

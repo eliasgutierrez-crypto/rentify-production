@@ -10,7 +10,6 @@ export interface PropertyProps {
   precio: number
   habitaciones: number
   banos: number
-  estacionamiento: number
   metros: number
   imagen: string
   tipo: string
@@ -41,7 +40,7 @@ export default function PropertyCard({ property }: Props) {
           <div className="absolute top-2 left-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur-md px-2 py-1 rounded-full shadow-sm">
             <CheckCircle2 size={14} className={property.verificada ? 'text-status-success' : 'text-yellow-600'} />
             <span className="text-[11px] font-bold text-primary">
-              {property.verificada ? 'Verificado Rentify' : 'Verificación pendiente'}
+              {property.verificada ? 'Propiedad y propietario verificados' : 'Verificación pendiente'}
             </span>
           </div>
           <button

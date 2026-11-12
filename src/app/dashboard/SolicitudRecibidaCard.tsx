@@ -18,6 +18,8 @@ interface Props {
     fecha_solicitud: Date
     inquilino_nombre: string
     inquilino_apellido: string
+    inquilino_correo?: string
+    inquilino_telefono?: string | null
     inmueble_tipo: string
     inmueble_direccion: string
     imagen: string
@@ -101,6 +103,21 @@ export default function SolicitudRecibidaCard({ solicitud }: Props) {
           <p className="text-sm text-gray-500 mt-1 italic">
             &quot;{solicitud.mensaje}&quot;
           </p>
+        )}
+        {solicitud.estado === 'aprobada' && (
+          <div className="mt-2 text-sm text-secondary">
+            <p>Contacto del inquilino</p>
+            {solicitud.inquilino_correo && (
+              <a className="block underline" href={`mailto:${solicitud.inquilino_correo}`}>
+              {solicitud.inquilino_correo}
+              </a>
+            )}
+            {solicitud.inquilino_telefono && (
+              <a className="block underline" href={`tel:${solicitud.inquilino_telefono}`}>
+                {solicitud.inquilino_telefono}
+              </a>
+            )}
+          </div>
         )}
         <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
           <Clock size={12} />

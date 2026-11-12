@@ -41,6 +41,65 @@ function revalidarModeracion() {
   revalidatePath('/')
 }
 
+export async function aprobarPublicacionAction(formData: FormData) {
+  await verificarAdmin()
+  const publicacionId = obtenerId(formData, 'publicacion_id')
+  await prisma.$transaction(async (tx) => {
+    const resultado = await tx.publicacion.updateMany({
+      where: { id: publicacionId, estado: 'pendiente_revision' },
+      data: { estado: 'activa', motivo_rechazo: null },
+    })
+    if (resultado.count !== 1) {
+      throw new Error('La publicación no existe o ya fue revisada')
+    }
+
+    const publicacion = await tx.publicacion.findUniqueOrThrow({
+      where: { id: publicacionId },
+      include: { inmueble: true },
+    })
+    await tx.notificacion.create({
+      data: {
+        usuario_id: publicacion.inmueble.propietario_id,
+        tipo: 'publicacion_aprobada',
+        mensaje: `La publicación "${publicacion.inmueble.tipo_inmueble}" fue aprobada y ya aparece en el catálogo.`,
+      },
+    })
+  })
+  revalidarModeracion()
+  revalidatePath(`/propiedad/${publicacionId}`)
+}
+
+export async function rechazarPublicacionAction(formData: FormData) {
+  await verificarAdmin()
+  const publicacionId = obtenerId(formData, 'publicacion_id')
+  const motivo = obtenerTexto(formData, 'motivo')
+  if (!motivo) throw new Error('Indica el motivo del rechazo')
+
+  await prisma.$transaction(async (tx) => {
+    const resultado = await tx.publicacion.updateMany({
+      where: { id: publicacionId, estado: 'pendiente_revision' },
+      data: { estado: 'rechazada', motivo_rechazo: motivo },
+    })
+    if (resultado.count !== 1) {
+      throw new Error('La publicación no existe o ya fue revisada')
+    }
+
+    const publicacion = await tx.publicacion.findUniqueOrThrow({
+      where: { id: publicacionId },
+      include: { inmueble: true },
+    })
+    await tx.notificacion.create({
+      data: {
+        usuario_id: publicacion.inmueble.propietario_id,
+        tipo: 'publicacion_rechazada',
+        mensaje: `La publicación "${publicacion.inmueble.tipo_inmueble}" requiere cambios. Motivo: ${motivo}`,
+      },
+    })
+  })
+  revalidarModeracion()
+  revalidatePath(`/propiedad/${publicacionId}`)
+}
+
 export async function suspenderPublicacionAction(formData: FormData) {
   const admin = await verificarAdmin()
   const publicacionId = obtenerId(formData, 'publicacion_id')
@@ -111,7 +170,10 @@ export async function eliminarPublicacionAction(formData: FormData) {
   await verificarAdmin()
   const publicacionId = obtenerId(formData, 'publicacion_id')
   const resultado = await prisma.publicacion.updateMany({
-    where: { id: publicacionId, estado: { in: ['activa', 'suspendida'] } },
+    where: {
+      id: publicacionId,
+      estado: { in: ['activa', 'suspendida', 'pendiente_revision', 'rechazada'] },
+    },
     data: { estado: 'eliminada' },
   })
   if (resultado.count !== 1) {

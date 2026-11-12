@@ -7,7 +7,6 @@ import {
   Bed,
   Bath,
   Ruler,
-  Car,
   CheckCircle2,
   Share2,
   Heart,
@@ -24,9 +23,6 @@ import {
   Monitor,
   Sparkles,
   Home,
-  Bike,
-  ShoppingCart,
-  Coffee,
   type LucideIcon,
 } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
@@ -36,6 +32,7 @@ import MapaPropiedad from '@/components/MapaPropiedad'
 import BotonReportar from './BotonReportar'
 import { getCurrentUser } from '@/lib/auth'
 import { parsearDisponibilidadVisitas } from '@/lib/disponibilidad-visitas'
+import { aproximarCoordenada, obtenerUbicacionAproximada } from '@/lib/ubicacion-publica'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -87,10 +84,12 @@ export default async function PropiedadContent({ params }: Props) {
     },
   })
 
+  const puedeRevisarNoPublicada = Boolean(usuario?.administrador)
   if (
     !publicacion ||
-    publicacion.estado !== 'activa' ||
-    publicacion.inmueble.estado_inventario !== 'disponible'
+    (!puedeRevisarNoPublicada &&
+      (publicacion.estado !== 'activa' ||
+        publicacion.inmueble.estado_inventario !== 'disponible'))
   ) {
     notFound()
   }
@@ -119,6 +118,17 @@ export default async function PropiedadContent({ params }: Props) {
   const disponibilidadVisitas = parsearDisponibilidadVisitas(
     publicacion.inmueble.disponibilidad_visitas
   )
+  const ubicacionAproximada = obtenerUbicacionAproximada(publicacion.inmueble.direccion)
+  const solicitudAprobada = usuario
+    ? await prisma.solicitudRenta.findFirst({
+        where: {
+          publicacion_id: publicacion.id,
+          inquilino_id: usuario.id,
+          estado: 'aprobada',
+        },
+        select: { id: true },
+      })
+    : null
 
   // Verificar si el usuario es el dueño (para no mostrar "Reportar" en su propia propiedad)
   const esPropietario = usuario?.id === publicacion.inmueble.propietario_id
@@ -155,13 +165,12 @@ export default async function PropiedadContent({ params }: Props) {
 
           {/* Título */}
           <div className="flex flex-col gap-2 pb-6">
+            {puedeRevisarNoPublicada && publicacion.estado !== 'activa' && (
+              <p className="w-fit rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800">
+                Vista administrativa · Estado: {publicacion.estado}
+              </p>
+            )}
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1 bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-xs font-semibold">
-                <CheckCircle2 size={14} /> Verificado Rentify
-              </span>
-              <span className="inline-flex items-center gap-1 bg-surface-container text-on-surface-variant px-2.5 py-1 rounded-full text-[11px]">
-                <Lock size={12} className="text-status-success" /> Contrato Digital
-              </span>
               {publicacion.inmueble.documento_verificado && (
                 <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-[11px] font-semibold">
                   <Shield size={12} /> Propiedad verificada
@@ -179,7 +188,7 @@ export default async function PropiedadContent({ params }: Props) {
               </span>
               <span>•</span>
               <span className="flex items-center gap-1">
-                <MapPin size={14} /> {publicacion.inmueble.direccion}
+                <MapPin size={14} /> {ubicacionAproximada}
               </span>
             </div>
           </div>
@@ -229,11 +238,6 @@ export default async function PropiedadContent({ params }: Props) {
               <div className="bg-white rounded-2xl p-6 shadow-sm">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
                   <div className="flex flex-col gap-1">
-                    <Building2 size={22} className="text-secondary" />
-                    <span className="text-[11px] text-on-surface-variant">Tipo</span>
-                    <span className="text-sm font-semibold text-primary">Entero</span>
-                  </div>
-                  <div className="flex flex-col gap-1">
                     <Ruler size={22} className="text-secondary" />
                     <span className="text-[11px] text-on-surface-variant">Área</span>
                     <span className="text-sm font-semibold text-primary">{publicacion.inmueble.metros_cuadrados} m²</span>
@@ -247,11 +251,6 @@ export default async function PropiedadContent({ params }: Props) {
                     <Bath size={22} className="text-secondary" />
                     <span className="text-[11px] text-on-surface-variant">Baños</span>
                     <span className="text-sm font-semibold text-primary">{publicacion.inmueble.numero_banos}</span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <Car size={22} className="text-secondary" />
-                    <span className="text-[11px] text-on-surface-variant">Estacionamiento</span>
-                    <span className="text-sm font-semibold text-primary">1</span>
                   </div>
                   <div className="flex flex-col gap-1">
                     <Building2 size={22} className="text-secondary" />
@@ -269,9 +268,11 @@ export default async function PropiedadContent({ params }: Props) {
                       <div className="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center text-2xl font-bold">
                         {publicacion.inmueble.propietario.usuario.nombre.charAt(0)}
                       </div>
-                      <span className="absolute -bottom-1 -right-1 bg-status-success text-white rounded-full p-1">
-                        <Shield size={12} />
-                      </span>
+                      {publicacion.inmueble.propietario.estado_verificacion === 'verificado' && (
+                        <span className="absolute -bottom-1 -right-1 bg-status-success text-white rounded-full p-1">
+                          <Shield size={12} />
+                        </span>
+                      )}
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
@@ -281,7 +282,7 @@ export default async function PropiedadContent({ params }: Props) {
                         </h3>
                         {publicacion.inmueble.propietario.estado_verificacion === 'verificado' && (
                           <span className="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-full text-[10px] font-semibold">
-                            Superanfitrión
+                            Propietario verificado
                           </span>
                         )}
                       </div>
@@ -296,20 +297,6 @@ export default async function PropiedadContent({ params }: Props) {
                         </span>
                       </div>
                     </div>
-                  </div>
-                </div>
-                <div className="mt-4 pt-4 grid grid-cols-1 md:grid-cols-3 gap-3 bg-surface-canvas p-4 rounded-xl">
-                  <div className="flex items-center gap-2 text-xs text-on-surface">
-                    <CheckCircle2 size={16} className="text-status-success" />
-                    Identidad validada INE
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-on-surface">
-                    <CheckCircle2 size={16} className="text-status-success" />
-                    Título en RPP validado
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-on-surface">
-                    <CheckCircle2 size={16} className="text-status-success" />
-                    14 contratos completados
                   </div>
                 </div>
               </div>
@@ -443,7 +430,7 @@ export default async function PropiedadContent({ params }: Props) {
                             <Star
                               key={i}
                               size={12}
-                              className={i < evaluacion.calificacion ? 'fill-rating-gold' : 'text-gray-300'}
+                              className={i < Math.round(evaluacion.calificacion) ? 'fill-rating-gold' : 'text-gray-300'}
                             />
                           ))}
                         </div>
@@ -462,14 +449,14 @@ export default async function PropiedadContent({ params }: Props) {
               <div className="bg-white rounded-2xl p-6 shadow-sm">
                 <h2 className="text-xl font-bold text-primary mb-2">Explora el vecindario</h2>
                 <p className="text-xs text-on-surface-variant mb-4">
-                  {publicacion.inmueble.direccion}
+                  {ubicacionAproximada}
                 </p>
 
                 {publicacion.inmueble.latitud && publicacion.inmueble.longitud ? (
                   <MapaPropiedad
-                    latitud={publicacion.inmueble.latitud}
-                    longitud={publicacion.inmueble.longitud}
-                    direccion={publicacion.inmueble.direccion}
+                    latitud={aproximarCoordenada(publicacion.inmueble.latitud)}
+                    longitud={aproximarCoordenada(publicacion.inmueble.longitud)}
+                    direccion={ubicacionAproximada}
                     tipoInmueble={publicacion.inmueble.tipo_inmueble}
                   />
                 ) : (
@@ -480,29 +467,6 @@ export default async function PropiedadContent({ params }: Props) {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-                  <div className="p-3 rounded-xl bg-surface-canvas flex items-start gap-2">
-                    <Coffee size={18} className="text-secondary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-semibold text-on-surface">Cafeterías</p>
-                      <p className="text-[11px] text-on-surface-variant">A 2 min a pie</p>
-                    </div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-surface-canvas flex items-start gap-2">
-                    <Bike size={18} className="text-secondary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-semibold text-on-surface">MiBici</p>
-                      <p className="text-[11px] text-on-surface-variant">Estación a 80 m</p>
-                    </div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-surface-canvas flex items-start gap-2">
-                    <ShoppingCart size={18} className="text-secondary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-semibold text-on-surface">Supermercados</p>
-                      <p className="text-[11px] text-on-surface-variant">A 6 min</p>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -556,7 +520,7 @@ export default async function PropiedadContent({ params }: Props) {
                       usuarioTelefono={usuario?.telefono || undefined}
                     />
                     <p className="text-center text-[11px] text-on-surface-variant">
-                      No se te cobrará nada hoy. Revisión de perfil en 24 hrs.
+                      Rentify no procesa pagos ni sustituye un contrato de arrendamiento.
                     </p>
                   </>
                 ) : (
@@ -582,15 +546,30 @@ export default async function PropiedadContent({ params }: Props) {
                   )}
                 </div>
 
-                <div className="p-3 rounded-xl bg-surface-container-low flex items-start gap-2">
-                  <Shield size={18} className="text-status-success flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-semibold text-primary">Garantía Rentify</p>
-                    <p className="text-[11px] text-on-surface-variant">
-                      Protección contra fraude y depósito en custodia segura.
+                {solicitudAprobada && (
+                  <div className="rounded-xl bg-surface-container p-3">
+                    <p className="text-xs font-semibold text-primary">Contacto del propietario</p>
+                    <p className="mt-1 text-[11px] text-on-surface-variant">
+                      Disponible porque tu solicitud fue aprobada.
                     </p>
+                    <div className="mt-2 flex flex-col gap-1 text-sm">
+                      <a
+                        href={`mailto:${publicacion.inmueble.propietario.usuario.correo}`}
+                        className="text-secondary underline"
+                      >
+                        {publicacion.inmueble.propietario.usuario.correo}
+                      </a>
+                      {publicacion.inmueble.propietario.usuario.telefono && (
+                        <a
+                          href={`tel:${publicacion.inmueble.propietario.usuario.telefono}`}
+                          className="text-secondary underline"
+                        >
+                          {publicacion.inmueble.propietario.usuario.telefono}
+                        </a>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Botón reportar en móvil */}
                 {usuario && !esPropietario && (

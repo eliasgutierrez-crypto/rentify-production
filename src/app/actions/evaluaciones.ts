@@ -21,15 +21,35 @@ export async function crearEvaluacionAction(
 
   const experiencia_renta_id = parseInt(formData.get('experiencia_renta_id') as string)
   const tipo_evaluacion = formData.get('tipo_evaluacion') as string
-  const calificacion = parseInt(formData.get('calificacion') as string)
   const comentario = formData.get('comentario') as string
 
-  if (!experiencia_renta_id || !tipo_evaluacion || !calificacion) {
+  if (
+    !Number.isInteger(experiencia_renta_id) ||
+    experiencia_renta_id <= 0 ||
+    !['inmueble', 'propietario', 'inquilino'].includes(tipo_evaluacion)
+  ) {
     return { error: 'Todos los campos obligatorios deben estar completos' }
   }
 
-  if (calificacion < 1 || calificacion > 5) {
-    return { error: 'La calificación debe estar entre 1 y 5 estrellas' }
+  const criterioCampos =
+    tipo_evaluacion === 'propietario'
+      ? ['calificacion_atencion', 'calificacion_mantenimiento', 'calificacion_cumplimiento']
+      : tipo_evaluacion === 'inquilino'
+        ? ['calificacion_puntualidad', 'calificacion_cuidado', 'calificacion_higiene']
+        : []
+  const criterios = criterioCampos.map((campo) => Number(formData.get(campo)))
+  const calificacion =
+    tipo_evaluacion === 'inmueble'
+      ? Number(formData.get('calificacion'))
+      : criterios.reduce((total, criterio) => total + criterio, 0) / criterios.length
+
+  if (
+    !Number.isFinite(calificacion) ||
+    calificacion < 1 ||
+    calificacion > 5 ||
+    criterios.some((criterio) => !Number.isInteger(criterio) || criterio < 1 || criterio > 5)
+  ) {
+    return { error: 'Las calificaciones deben estar entre 1 y 5 estrellas' }
   }
 
   const experiencia = await prisma.experienciaRenta.findUnique({
@@ -93,6 +113,20 @@ export async function crearEvaluacionAction(
         tipo_evaluacion,
         calificacion,
         comentario: comentario || null,
+        ...(tipo_evaluacion === 'propietario'
+          ? {
+              calificacion_atencion: criterios[0],
+              calificacion_mantenimiento: criterios[1],
+              calificacion_cumplimiento: criterios[2],
+            }
+          : {}),
+        ...(tipo_evaluacion === 'inquilino'
+          ? {
+              calificacion_puntualidad: criterios[0],
+              calificacion_cuidado: criterios[1],
+              calificacion_higiene: criterios[2],
+            }
+          : {}),
       },
     })
 

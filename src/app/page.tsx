@@ -5,7 +5,8 @@ import Navbar from '@/components/Navbar'
 import Hero from '@/components/Hero'
 import PropertyCard, { PropertyProps } from '@/components/PropertyCard'
 import { prisma } from '@/lib/prisma'
-import { MapPin, Calendar, Fingerprint, Key, Star } from 'lucide-react'
+import { MapPin, Calendar, FileText } from 'lucide-react'
+import { obtenerUbicacionAproximada } from '@/lib/ubicacion-publica'
 
 async function PropiedadesDestacadas() {
   // La página inicial muestra solo publicaciones activas y una foto de portada por inmueble.
@@ -24,11 +25,10 @@ async function PropiedadesDestacadas() {
   const propiedades: PropertyProps[] = publicaciones.map((pub) => ({
     id: pub.id,
     titulo: pub.inmueble.tipo_inmueble,
-    ubicacion: pub.inmueble.direccion,
+    ubicacion: obtenerUbicacionAproximada(pub.inmueble.direccion),
     precio: pub.precio_renta,
     habitaciones: pub.inmueble.numero_habitaciones,
     banos: pub.inmueble.numero_banos,
-    estacionamiento: 1,
     metros: pub.inmueble.metros_cuadrados,
     tipo: pub.inmueble.tipo_inmueble,
     permite_mascotas: pub.permite_mascotas,
@@ -124,14 +124,14 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="max-w-2xl mx-auto text-center mb-12">
             <span className="text-xs font-semibold text-secondary uppercase tracking-widest">
-              El nuevo estándar inmobiliario
+              Proyecto académico
             </span>
             <h2 className="text-3xl font-bold text-primary tracking-tight mt-2 mb-3">
-              ¿Cómo funciona Rentify?
+              ¿Qué puedes hacer en Rentify?
             </h2>
             <p className="text-sm text-on-surface-variant">
-              Eliminamos la burocracia del arrendamiento tradicional mexicano. Sin aval
-              con bien inmueble, sin filas en notarías y con total certeza jurídica.
+              Explora inmuebles, revisa sus condiciones y coordina solicitudes y visitas
+              desde un solo lugar. Rentify no procesa pagos ni sustituye un contrato.
             </p>
           </div>
 
@@ -141,19 +141,19 @@ export default function Home() {
                 icon: Calendar,
                 num: '01',
                 title: 'Explora y agenda',
-                desc: 'Descubre fotografías reales sin filtros distorsionados. Agenda recorridos virtuales 3D o visitas presenciales acompañadas.',
+                desc: 'Filtra propiedades por precio, ubicación, características y reglas. Puedes solicitar una visita presencial o por videollamada.',
               },
               {
-                icon: Fingerprint,
+                icon: FileText,
                 num: '02',
-                title: 'Aprobación 100% digital',
-                desc: 'Califica en minutos conectando tus comprobantes de ingresos. Olvídate del requerimiento obsoleto de un aval con propiedad.',
+                title: 'Envía tu solicitud',
+                desc: 'El propietario revisa y aprueba o rechaza cada solicitud. El estado queda visible en tu dashboard.',
               },
               {
-                icon: Key,
+                icon: MapPin,
                 num: '03',
-                title: 'Múdate seguro',
-                desc: 'Firma tu contrato de arrendamiento digital certificado con validez legal. Póliza jurídica incluida y soporte continuo.',
+                title: 'Coordina con las partes',
+                desc: 'Después de la aprobación se comparte el contacto para coordinar. Rentify no procesa pagos ni genera contratos.',
               },
             ].map((paso, idx) => (
               <div key={idx} className="bg-white rounded-2xl p-6 shadow-md hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
@@ -172,64 +172,35 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Testimonios */}
+      {/* Funciones principales */}
       <section className="w-full max-w-7xl mx-auto px-6 py-16">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
-          <div>
-            <span className="text-xs font-semibold text-secondary uppercase tracking-widest">
-              Experiencias reales
-            </span>
-            <h2 className="text-3xl font-bold text-primary tracking-tight mt-1">
-              Lo que dicen nuestros inquilinos
-            </h2>
-          </div>
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm">
-            <div className="flex text-rating-gold">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Star key={i} size={16} className="fill-rating-gold" />
-              ))}
-            </div>
-            <span className="text-sm font-bold text-on-surface">4.92 / 5</span>
-            <span className="text-xs text-on-surface-variant">(1,480+ reseñas)</span>
-          </div>
+        <div className="mb-10">
+          <span className="text-xs font-semibold text-secondary uppercase tracking-widest">
+            Herramientas de la plataforma
+          </span>
+          <h2 className="text-3xl font-bold text-primary tracking-tight mt-1">
+            Mantén cada paso organizado
+          </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
             {
-              text: 'Llegué por trabajo desde Monterrey y todas las inmobiliarias me exigían un aval. Con Rentify me validaron con mi nómina en menos de una tarde.',
-              nombre: 'Valeria Montes',
-              rol: 'Inquilina en Chapalita, GDL',
+              titulo: 'Búsqueda con filtros',
+              texto: 'Compara precios, ubicación, habitaciones, amenidades y reglas desde el catálogo.',
             },
             {
-              text: 'El departamento en Colonia Americana estaba exactamente idéntico a las fotos. La entrega con inventario digital me dio muchísima tranquilidad.',
-              nombre: 'Rodrigo Alatorre',
-              rol: 'Inquilino en Col. Americana, GDL',
+              titulo: 'Solicitudes y visitas',
+              texto: 'Consulta el estado de tus solicitudes y coordina visitas presenciales o por videollamada.',
             },
             {
-              text: 'Hicimos todo el proceso desde el teléfono mientras coordinábamos la mudanza. El filtro pet friendly nos ahorró semanas enteras de búsqueda.',
-              nombre: 'Camila Sotomayor',
-              rol: 'Inquilina en Providencia, GDL',
+              titulo: 'Revisión y evaluaciones',
+              texto: 'Los administradores revisan documentos y anuncios; las evaluaciones se habilitan al finalizar una renta.',
             },
-          ].map((t, idx) => (
-            <div key={idx} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
-              <div>
-                <div className="flex gap-0.5 text-rating-gold mb-3">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Star key={i} size={16} className="fill-rating-gold" />
-                  ))}
-                </div>
-                <p className="text-sm text-on-surface italic mb-4">&quot;{t.text}&quot;</p>
-              </div>
-              <div className="flex items-center gap-3 pt-3 border-t border-surface-container">
-                <div className="w-10 h-10 rounded-full bg-secondary text-white flex items-center justify-center font-bold">
-                  {t.nombre.charAt(0)}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-primary">{t.nombre}</p>
-                  <p className="text-xs text-on-surface-variant">{t.rol}</p>
-                </div>
-              </div>
+          ].map((funcion) => (
+            <div key={funcion.titulo} className="rounded-2xl bg-white p-6 shadow-sm">
+              <h3 className="mb-2 text-lg font-semibold text-primary">{funcion.titulo}</h3>
+              <p className="text-sm leading-relaxed text-on-surface-variant">{funcion.texto}</p>
             </div>
           ))}
         </div>
@@ -242,16 +213,16 @@ export default function Home() {
             <div className="lg:col-span-2">
               <h3 className="text-2xl font-bold text-primary mb-3">Rentify</h3>
               <p className="text-sm text-on-surface-variant max-w-sm">
-                Plataforma residencial líder en México. Rediseñamos el arrendamiento con
-                certeza jurídica, inspecciones rigurosas y arquitectura contemporánea.
+                Proyecto académico para explorar inmuebles en renta y organizar solicitudes,
+                visitas y revisiones. No procesa pagos ni genera contratos.
               </p>
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-primary mb-3">Explorar México</h4>
+              <h4 className="text-sm font-semibold text-primary mb-3">Explorar Guadalajara</h4>
               <ul className="space-y-2 text-sm text-on-surface-variant">
                 <li><Link href="/propiedades" className="hover:text-on-surface">Guadalajara & Zapopan</Link></li>
-                <li><Link href="/propiedades" className="hover:text-on-surface">CDMX Residencial</Link></li>
-                <li><Link href="/propiedades" className="hover:text-on-surface">Monterrey & San Pedro</Link></li>
+                <li><Link href="/propiedades" className="hover:text-on-surface">Colonia Americana</Link></li>
+                <li><Link href="/propiedades" className="hover:text-on-surface">Providencia</Link></li>
               </ul>
             </div>
             <div>
@@ -265,7 +236,7 @@ export default function Home() {
           </div>
           <div className="pt-6 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-xs text-on-surface-variant">
-              © 2026 Rentify Tecnologías Inmobiliarias S.A.P.I. de C.V. Todos los derechos reservados.
+              © 2026 Rentify · Proyecto académico
             </p>
           </div>
         </div>

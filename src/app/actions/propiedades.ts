@@ -135,7 +135,7 @@ export async function publicarPropiedadAction(
           reglas: reglas || null,
           permite_mascotas,
           permite_ninos,
-          estado: 'activa',
+          estado: 'pendiente_revision',
         },
       })
 
@@ -149,9 +149,23 @@ export async function publicarPropiedadAction(
           },
         })
       }
+
+      const administradores = await tx.administrador.findMany({
+        select: { usuario_id: true },
+      })
+      if (administradores.length > 0) {
+        await tx.notificacion.createMany({
+          data: administradores.map(({ usuario_id }) => ({
+            usuario_id,
+            tipo: 'publicacion_pendiente_revision',
+            mensaje: `Hay una nueva publicación pendiente de revisión: "${tipo_inmueble}".`,
+          })),
+        })
+      }
     })
 
     revalidatePath('/dashboard')
+    revalidatePath('/dashboard/admin')
   } catch (error) {
     console.error('Error al publicar propiedad:', error)
     return { error: 'Error al publicar la propiedad. Intenta de nuevo.' }

@@ -21,6 +21,7 @@ async function AdminContent() {
     totalUsuarios,
     totalInmuebles,
     publicacionesActivas,
+    publicacionesPendientes,
     publicacionesSuspendidas,
     verificacionesPendientes,
     reportesPendientes,
@@ -32,6 +33,7 @@ async function AdminContent() {
     prisma.usuario.count(),
     prisma.inmueble.count(),
     prisma.publicacion.count({ where: { estado: 'activa' } }),
+    prisma.publicacion.count({ where: { estado: 'pendiente_revision' } }),
     prisma.publicacion.count({ where: { estado: 'suspendida' } }),
     prisma.documento.count({ where: { estado: 'pendiente' } }),
     prisma.reporte.count({ where: { estado: 'pendiente' } }),
@@ -121,7 +123,7 @@ async function AdminContent() {
           <p className="text-xs text-on-surface-variant uppercase tracking-wider">Inmuebles</p>
           <p className="text-2xl font-bold text-primary mt-1">{totalInmuebles}</p>
           <p className="text-[11px] text-on-surface-variant mt-1">
-            {publicacionesActivas} activos · {publicacionesSuspendidas} suspendidos
+            {publicacionesActivas} activos · {publicacionesPendientes} pendientes · {publicacionesSuspendidas} suspendidos
           </p>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm">

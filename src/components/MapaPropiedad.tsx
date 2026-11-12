@@ -43,7 +43,7 @@ export default function MapaPropiedad({ latitud, longitud, direccion, tipoInmueb
     <div className="w-full h-72 rounded-xl overflow-hidden shadow-inner">
       <MapContainer
         center={[latitud, longitud]}
-        zoom={15}
+        zoom={12}
         scrollWheelZoom={false}
         style={{ height: '100%', width: '100%' }}
       >

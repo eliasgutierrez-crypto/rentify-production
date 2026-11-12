@@ -156,6 +156,9 @@ export async function editarInmuebleAction(
             reglas: reglas || null,
             permite_mascotas,
             permite_ninos,
+            ...(inmueble.publicaciones[0].estado === 'rechazada'
+              ? { estado: 'pendiente_revision', motivo_rechazo: null }
+              : {}),
           },
         })
         : await tx.publicacion.create({
@@ -165,7 +168,7 @@ export async function editarInmuebleAction(
             deposito,
             descripcion,
             reglas: reglas || null,
-            estado: 'activa',
+            estado: 'pendiente_revision',
           },
         })
 
@@ -182,9 +185,28 @@ export async function editarInmuebleAction(
           })),
         })
       }
+
+      if (
+        !inmueble.publicaciones[0] ||
+        inmueble.publicaciones[0].estado === 'rechazada'
+      ) {
+        const administradores = await tx.administrador.findMany({
+          select: { usuario_id: true },
+        })
+        if (administradores.length > 0) {
+          await tx.notificacion.createMany({
+            data: administradores.map(({ usuario_id }) => ({
+              usuario_id,
+              tipo: 'publicacion_pendiente_revision',
+              mensaje: `Hay una publicación pendiente de revisión: "${tipo_inmueble}".`,
+            })),
+          })
+        }
+      }
     })
 
     revalidatePath('/dashboard')
+    revalidatePath('/dashboard/admin')
     if (inmueble.publicaciones[0]) {
       revalidatePath(`/propiedad/${inmueble.publicaciones[0].id}`)
     }
