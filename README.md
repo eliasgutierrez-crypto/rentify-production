@@ -296,11 +296,13 @@ Los requisitos de servicio (tiempos, uptime, TLS, backups) requieren pruebas y c
 
 5. (Opcional) Carga los datos de demostración en una base local o desechable:
 
-   ```bash
+   ```powershell
+   $env:RENTIFY_ALLOW_DEMO_SEED = 'true'
    npm run db:seed
    ```
 
-   **El seed elimina primero los datos de las tablas de Rentify y los vuelve a crear. No lo ejecutes en una base con datos que deban conservarse.**
+   El seed también crea o actualiza las cuentas en Supabase Auth y restablece su contraseña de prueba. Confirma que `.env` use una base de datos y un proyecto Supabase locales/de prueba.
+   **El seed elimina los datos existentes de Rentify. No lo ejecutes en producción ni en una base con datos que deban conservarse.**
 
 6. Configura el bucket de Storage (consulta [Supabase Storage y documentos](#supabase-storage-y-documentos)).
 
@@ -325,7 +327,7 @@ Define estas variables en `.env` en la raíz de la aplicación. La plantilla sin
 | `NEXT_PUBLIC_APP_URL` | Recomendada en despliegue | URL pública del sitio, usada en los enlaces de confirmación y recuperación. En Vercel, si falta o apunta a localhost, se usa el dominio del despliegue; en local puede ser `http://localhost:3000`. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Sí | URL del proyecto Supabase. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sí | Clave pública anon/publishable del proyecto Supabase. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Sí para revisión de documentos | Clave privada usada únicamente en el servidor para generar enlaces temporales de lectura. Nunca debe exponerse al navegador. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Sí para revisión de documentos y seed de prueba | Clave privada usada únicamente en el servidor para generar enlaces temporales y preparar las cuentas confirmadas del seed. Nunca debe exponerse al navegador. |
 | `PRISMA_LOG_QUERIES` | No | Si vale exactamente `true`, Prisma registra consultas además de advertencias y errores. |
 
 Ejemplo de formato, usando valores propios:
@@ -357,7 +359,7 @@ Mantén `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` y `DIRECT_URL` como secretos
 
 Las migraciones versionadas están en `prisma/migrations/`. La configuración de Prisma define PostgreSQL y lee `DATABASE_URL` y `DIRECT_URL` desde el entorno.
 
-La migración `20261111201500_aprobacion_y_criterios_evaluacion` agrega el motivo de rechazo de publicaciones y los criterios de evaluación. Para probarla, confirma primero que `.env` apunta a una base local o de pruebas y ejecuta `npx prisma migrate deploy`. No se ha aplicado automáticamente a ninguna base. Antes de usarla en otro entorno, revisa el destino y el respaldo disponible; no uses `migrate dev` en producción.
+La migración `20261111201500_aprobacion_y_criterios_evaluacion` agrega el motivo de rechazo de publicaciones y los criterios de evaluación. Para cada entorno, confirma el destino, revisa el respaldo disponible y ejecuta `npx prisma migrate deploy`; el build no aplica migraciones. No uses `migrate dev` en producción.
 
 ```bash
 # Crear una migración nueva y aplicarla en desarrollo
@@ -373,9 +375,18 @@ npx prisma validate
 npx prisma generate
 ```
 
-El seed crea usuarios, perfiles, amenidades, inmuebles, publicaciones, fotos, reseñas y registros de ejemplo para probar solicitudes, visitas, reportes, documentos, notificaciones y experiencias de renta. El script está en [`prisma/seed.ts`](./prisma/seed.ts) y borra primero los registros existentes de las tablas que utiliza.
+El seed crea 9 inmuebles publicados, fotos, reseñas y datos para probar solicitudes, visitas, reportes, documentos, notificaciones y 6 rentas finalizadas con evaluaciones de ambos lados. El script [`prisma/seed.ts`](./prisma/seed.ts) borra primero los registros existentes de las tablas de Rentify que utiliza y vuelve a crear las cuentas de prueba.
 
-El seed crea perfiles de Rentify en PostgreSQL, **no identidades de Supabase Auth**. Para iniciar sesión como una cuenta sembrada, crea la identidad correspondiente en **Supabase → Authentication → Users** (por ejemplo, con auto-confirmación en una base de pruebas) usando el mismo correo y contraseña. Al autenticarse, Rentify vincula esa identidad con el perfil existente por correo. Las cuentas y contraseñas conocidas son solo para pruebas locales.
+El seed también usa `SUPABASE_SERVICE_ROLE_KEY` para crear o actualizar las seis identidades de prueba en Supabase Auth, marcar sus correos como confirmados y enlazar sus IDs con PostgreSQL. No envía correos. La contraseña de todas es `test123`.
+
+**No ejecutes este seed con la base de producción ni con datos que deban conservarse.** Requiere que `.env` apunte a una base de datos y un proyecto de Supabase locales/de prueba y que `RENTIFY_ALLOW_DEMO_SEED=true`. El seed se niega a ejecutarse en Vercel o con `NODE_ENV=production`.
+
+En PowerShell, después de configurar `.env` con los servicios de prueba:
+
+```powershell
+$env:RENTIFY_ALLOW_DEMO_SEED = 'true'
+npm run db:seed
+```
 
 ## Supabase Storage y documentos
 
@@ -401,16 +412,18 @@ No habilites lectura pública ni expongas la clave service role al navegador. Ac
 
 ## Cuentas de demostración
 
-El seed asigna la contraseña `test123` a las cuentas que crea:
+El seed asigna la contraseña `test123` y confirma el correo de estas identidades de prueba en Supabase Auth:
 
 | Correo | Perfiles |
 | --- | --- |
-| `carlos@rentify.com` | Propietario. |
-| `maria@rentify.com` | Propietaria. |
+| `carlos@rentify.com` | Propietario e inquilino. |
+| `maria@rentify.com` | Propietaria e inquilina. |
 | `ana@rentify.com` | Inquilina y propietaria. |
-| `admin@rentify.com` | Administrador y propietario. |
+| `mariana@test.com` | Inquilina. |
+| `rodrigo@test.com` | Inquilino. |
+| `admin@rentify.com` | Administrador, propietario e inquilino. |
 
-También se crean cuentas de ejemplo para las reseñas. Todas estas credenciales son públicas y exclusivamente para pruebas locales. Cámbialas o elimina estos datos antes de cualquier entorno accesible públicamente.
+Todas estas credenciales son públicas y exclusivamente para pruebas locales. El seed confirma las cuentas solo para facilitar las pruebas; el registro normal sigue sujeto a las reglas de verificación de Supabase Auth. Cambia las contraseñas o elimina estas cuentas antes de cualquier entorno accesible públicamente.
 
 ## Correo electrónico y autenticación
 
@@ -528,7 +541,7 @@ Las acciones de servidor están separadas por dominio:
 - La foto de perfil y las fotos de publicaciones se capturan como URLs; solo los documentos de verificación usan Storage privado.
 - Las cifras, calificaciones y testimonios promocionales que no provenían de datos fueron retirados de la portada y del inicio de sesión. Algunas imágenes externas de esas pantallas son ilustrativas y no representan necesariamente inmuebles publicados.
 - No se ha configurado una suite de pruebas automatizadas.
-- El seed es destructivo y las cuentas de prueba tienen contraseñas conocidas.
+- El seed es destructivo, crea cuentas confirmadas en Supabase Auth y restablece sus contraseñas conocidas; úsalo solo en un entorno local/de prueba.
 - El panel de guía contiene actualmente contenido introductorio básico.
 - Para producción se requiere configurar secretos, base de datos, Storage, políticas y variables de entorno propias; no se incluye aquí una configuración de despliegue específica del proveedor.
 
