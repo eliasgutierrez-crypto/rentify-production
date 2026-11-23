@@ -11,6 +11,7 @@ import {
   eliminarPublicacionAction,
   rechazarPublicacionAction,
 } from '@/app/actions/admin'
+import { formatearFecha, formatearImporte } from '@/lib/formato'
 
 export interface PublicacionAdmin {
   id: number
@@ -121,13 +122,13 @@ export default function TabModeracion({ publicaciones }: { publicaciones: Public
                     </p>
                     <p className="text-xs text-on-surface-variant flex items-center gap-1 mt-1">
                       <Calendar size={12} />{' '}
-                      {new Date(pub.fecha_publicacion).toLocaleDateString('es-MX')}
+                      {formatearFecha(pub.fecha_publicacion)}
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">
-<p className="text-sm font-bold text-primary">
-  ${pub.precio_renta.toLocaleString('en-US')}
-</p>
+                    <p className="text-sm font-bold text-primary">
+                      ${formatearImporte(pub.precio_renta)}
+                    </p>
                     <span
                       className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full mt-1 inline-block ${
                         pub.estado === 'activa'

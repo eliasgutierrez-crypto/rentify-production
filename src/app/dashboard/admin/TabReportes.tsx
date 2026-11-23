@@ -16,6 +16,7 @@ import {
   resolverReporteAction,
   descartarReporteAction,
 } from '@/app/actions/admin'
+import { formatearFecha } from '@/lib/formato'
 
 export type ReporteAdmin = Prisma.ReporteGetPayload<{
   include: {
@@ -79,7 +80,7 @@ export default function TabReportes({ reportes }: { reportes: ReporteAdmin[] }) 
                   </p>
                   <p className="text-xs text-on-surface-variant flex items-center gap-1 mt-1">
                     <Calendar size={12} />{' '}
-                    {new Date(rep.fecha_reporte).toLocaleDateString('es-MX')}
+                    {formatearFecha(rep.fecha_reporte)}
                   </p>
                 </div>
                 <span

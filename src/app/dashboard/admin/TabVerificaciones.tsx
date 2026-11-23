@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import { FileText, Eye, CheckCircle2, XCircle, User, Calendar } from 'lucide-react'
 import { aprobarDocumentoAction, rechazarDocumentoAction } from '@/app/actions/admin'
+import { formatearFecha } from '@/lib/formato'
 
 export interface DocumentoAdmin {
   id: number
@@ -76,7 +77,7 @@ export default function TabVerificaciones({ documentos }: { documentos: Document
                     )}
                     <p className="text-xs text-on-surface-variant flex items-center gap-1 mt-1">
                       <Calendar size={12} />{' '}
-                      {new Date(doc.fecha_carga).toLocaleDateString('es-MX')}
+                      {formatearFecha(doc.fecha_carga)}
                     </p>
                     {doc.usuario?.propietario && (
                       <p className="text-[11px] text-on-surface-variant mt-1">
