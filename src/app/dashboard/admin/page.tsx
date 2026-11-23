@@ -17,6 +17,15 @@ async function AdminContent() {
   if (!usuario) redirect('/login')
   if (!usuario.administrador) redirect('/dashboard')
 
+  async function consultaSegura<T>(nombre: string, consulta: Promise<T>, fallback: T): Promise<T> {
+    try {
+      return await consulta
+    } catch (error) {
+      console.error(`No se pudo cargar ${nombre} en el panel administrativo:`, error)
+      return fallback
+    }
+  }
+
   const [
     totalUsuarios,
     totalInmuebles,
@@ -30,50 +39,62 @@ async function AdminContent() {
     documentos,
     reportes,
   ] = await Promise.all([
-    prisma.usuario.count(),
-    prisma.inmueble.count(),
-    prisma.publicacion.count({ where: { estado: 'activa' } }),
-    prisma.publicacion.count({ where: { estado: 'pendiente_revision' } }),
-    prisma.publicacion.count({ where: { estado: 'suspendida' } }),
-    prisma.documento.count({ where: { estado: 'pendiente' } }),
-    prisma.reporte.count({ where: { estado: 'pendiente' } }),
-    prisma.usuario.count({ where: { bloqueado: true } }),
-    prisma.publicacion.findMany({
-      include: {
-        inmueble: {
-          include: {
-            propietario: { include: { usuario: true } },
+    consultaSegura('el total de usuarios', prisma.usuario.count(), 0),
+    consultaSegura('el total de inmuebles', prisma.inmueble.count(), 0),
+    consultaSegura('las publicaciones activas', prisma.publicacion.count({ where: { estado: 'activa' } }), 0),
+    consultaSegura('las publicaciones pendientes', prisma.publicacion.count({ where: { estado: 'pendiente_revision' } }), 0),
+    consultaSegura('las publicaciones suspendidas', prisma.publicacion.count({ where: { estado: 'suspendida' } }), 0),
+    consultaSegura('las verificaciones pendientes', prisma.documento.count({ where: { estado: 'pendiente' } }), 0),
+    consultaSegura('los reportes pendientes', prisma.reporte.count({ where: { estado: 'pendiente' } }), 0),
+    consultaSegura('los usuarios bloqueados', prisma.usuario.count({ where: { bloqueado: true } }), 0),
+    consultaSegura(
+      'las publicaciones',
+      prisma.publicacion.findMany({
+        include: {
+          inmueble: {
+            include: {
+              propietario: { include: { usuario: true } },
+            },
           },
+          fotos: { take: 1, orderBy: { orden: 'asc' } },
+          _count: { select: { reportes: true } },
         },
-        fotos: { take: 1, orderBy: { orden: 'asc' } },
-        _count: { select: { reportes: true } },
-      },
-      orderBy: { fecha_publicacion: 'desc' },
-    }),
-    prisma.documento.findMany({
-      include: {
-        usuario: {
-          include: { propietario: true, inquilino: true },
+        orderBy: { fecha_publicacion: 'desc' },
+      }),
+      []
+    ),
+    consultaSegura(
+      'los documentos',
+      prisma.documento.findMany({
+        include: {
+          usuario: {
+            include: { propietario: true, inquilino: true },
+          },
+          inmueble: true,
         },
-        inmueble: true,
-      },
-      orderBy: { fecha_carga: 'desc' },
-    }),
-    prisma.reporte.findMany({
-      include: {
-        usuario: true,
-        publicacion: {
-          include: {
-            inmueble: {
-              include: {
-                propietario: { include: { usuario: true } },
+        orderBy: { fecha_carga: 'desc' },
+      }),
+      []
+    ),
+    consultaSegura(
+      'los reportes',
+      prisma.reporte.findMany({
+        include: {
+          usuario: true,
+          publicacion: {
+            include: {
+              inmueble: {
+                include: {
+                  propietario: { include: { usuario: true } },
+                },
               },
             },
           },
         },
-      },
-      orderBy: { fecha_reporte: 'desc' },
-    }),
+        orderBy: { fecha_reporte: 'desc' },
+      }),
+      []
+    ),
   ])
 
   let documentosFirmados = documentos
