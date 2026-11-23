@@ -622,14 +622,16 @@ export default function PublicarPage() {
                     </div>
                     <button
                       type="button"
+                      role="switch"
+                      aria-checked={mantenimientoIncluido}
                       onClick={() => setMantenimientoIncluido(!mantenimientoIncluido)}
-                      className={`w-12 h-6 rounded-full relative transition-colors ${
+                      className={`w-12 h-6 rounded-full relative overflow-hidden transition-colors ${
                         mantenimientoIncluido ? 'bg-primary' : 'bg-gray-300'
                       }`}
                     >
                       <span
-                        className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                          mantenimientoIncluido ? 'translate-x-6' : 'translate-x-0.5'
+                        className={`absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                          mantenimientoIncluido ? 'translate-x-6' : 'translate-x-0'
                         }`}
                       />
                     </button>
