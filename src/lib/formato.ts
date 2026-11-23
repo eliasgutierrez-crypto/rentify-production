@@ -1,6 +1,6 @@
 export function formatearFecha(valor: Date | string): string {
   const fecha = new Date(valor)
-  if (Number.isNaNaN(fecha.getTime())) return ''
+  if (Number.isNaN(fecha.getTime())) return ''
 
   const dia = String(fecha.getUTCDate()).padStart(2, '0')
   const mes = String(fecha.getUTCMonth() + 1).padStart(2, '0')
